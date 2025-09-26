@@ -35,7 +35,27 @@ TODO: Add links to any published papers or preprints related to this project.
 ```
 TrustworthyRAG/
 ├── data/ # Raw and processed cybersecurity datasets
-├── src/ # Source code (RAG pipeline, attacks, defenses, explainability)
+|  | raw/ # Original datasets
+|  | processed/ # Cleaned and preprocessed data
+|  | metadata/ # Dataset metadata and documentation
+|  └── adversarial/ # Adversarial examples and attack data
+├── src/ # Source code
+|  ├── rag_pipeline/ # RAG pipeline implementation
+|  |  | retriever.py # Retriever module
+|  |  | generator.py # Generator module
+|  |  └── pipeline.py # Main RAG pipeline
+|  ├── utils/ # Utility functions for data processing, evaluation, etc.
+|  ├── attacks/ # Adversarial attack implementations
+|  |  | prompt_injection.py # Prompt injection attack
+|  |  | retrieval_poisoning.py # Retrieval poisoning attack
+|  |  └── backdoors.py # Backdoor attack
+|  ├── defenses/ # Defense mechanisms
+|  |  | filtering.py # Filtering strategies
+|  |  | trust_scoring.py # Trust scoring methods
+|  |  └── re_ranking.py # Re-ranking strategies
+|  └── explainability/ # Explainability tools
+|     | attention_viz.py # Attention visualization
+|     └── shap_lime.py # SHAP/LIME explanations
 ├── experiments/ # Scripts and notebooks for running experiments
 ├── results/ # Figures, tables, and logs from experiments
 ├── papers/ # Drafts and notes for research papers
