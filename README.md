@@ -40,6 +40,11 @@ TrustworthyRAG/
 |  | metadata/ # Dataset metadata and documentation
 |  └── adversarial/ # Adversarial examples and attack data
 ├── src/ # Source code
+|  |── data_ingestion/ # Knowledge graph construction and data loading
+|  |  | cybersec_data_ingestion.py # Main cybersecurity data ingestion module
+|  |  | cwe_data_ingestion.py # CWE data ingestion module
+|  |  | cve_data_ingestion.py # CVE data ingestion module
+|  |  └── kg_construction.py # Knowledge graph construction module
 |  ├── rag_pipeline/ # RAG pipeline implementation
 |  |  | retriever.py # Retriever module
 |  |  | generator.py # Generator module
