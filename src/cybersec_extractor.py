@@ -293,7 +293,6 @@ class CybersecEntityExtractor(BaseExtractor):
         """Extract relations using dependency parsing and patterns"""
         relations = []
 
-        # Define comprehensive relation patterns
         relation_patterns = {
             'CREATED_BY': {
                 'patterns': [
@@ -308,7 +307,7 @@ class CybersecEntityExtractor(BaseExtractor):
                     ('MALWARE', 'PERSON'),
                     ('MALWARE', 'ORGANIZATION')
                 ],
-                'bidirectional': True  # Can be reversed
+                'bidirectional': True
             },
             'EXPLOITS': {
                 'patterns': [

@@ -1,5 +1,5 @@
-from src.parsers.mineru_parser import MinerUParser
-from src.extractors.cybersec_extractor import CybersecEntityExtractor
+from src.mineru_parser import MinerUParser
+from src.cybersec_extractor import CybersecEntityExtractor
 
 # Parse document
 parser_config = {"dtype": "auto", "device_map": "auto"}

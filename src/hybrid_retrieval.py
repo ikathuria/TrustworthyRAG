@@ -1,6 +1,6 @@
 from typing import List, Dict, Any, Optional
 import logging
-from src.knowledge_graph.neo4j_manager import Neo4jManager
+from src.neo4j_manager import Neo4jManager
 
 # LangChain imports
 try:

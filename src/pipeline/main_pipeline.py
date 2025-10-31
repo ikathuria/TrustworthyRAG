@@ -12,9 +12,9 @@ import time
 
 # Import components
 from utils.base import BaseParser, BaseExtractor, ParsedContent, Entity, Relation
-from parsers.mineru_parser import MinerUParser, create_parser
-from src.extractors.cybersec_extractor import CyNERExtractor, create_extractor
-from knowledge_graph.neo4j_manager import Neo4jManager, create_neo4j_manager
+from src.mineru_parser import MinerUParser, create_parser
+from src.cybersec_extractor import CyNERExtractor, create_extractor
+from src.neo4j_manager import Neo4jManager, create_neo4j_manager
 
 
 class CybersecKnowledgeGraphPipeline:
