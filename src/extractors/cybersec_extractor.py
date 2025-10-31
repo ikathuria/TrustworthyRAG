@@ -37,26 +37,29 @@ class CybersecEntityExtractor(BaseExtractor):
             'EMAIL': re.compile(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'),
             'URL': re.compile(r'https?://[^\s<>"{}|\\^`\[\]]+'),
             'DOMAIN': re.compile(r'\b(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}\b'),
-            'PORT': re.compile(r'(?:port|tcp|udp)\s+(\d+)', re.IGNORECASE)
+            'PORT': re.compile(r'(?:port|tcp|udp)\s+(\d+)', re.IGNORECASE),
+            'MS_VULN': re.compile(r'MS\d{2}-\d{3}', re.IGNORECASE)
         }
 
         # Malware keywords
         self.malware_keywords = {
             'trojan', 'backdoor', 'rootkit', 'ransomware', 'worm', 'virus',
             'spyware', 'adware', 'botnet', 'exploit', 'dropper', 'loader',
-            'ginwui', 'ripgof', 'dasher', 'pcshare', 'mdropper', 'daserf'
+            'ginwui', 'ripgof', 'dasher', 'pcshare', 'mdropper', 'daserf',
+            'booli', 'flux', 'ppdropper', 'malware'
         }
 
         # Attack pattern keywords
         self.attack_keywords = {
-            'zero-day', 'phishing', 'spear-phishing', 'ddos', 'dos',
-            'sql injection', 'xss', 'csrf', 'buffer overflow', 'privilege escalation'
+            'zero-day', '0-day', 'phishing', 'spear-phishing', 'ddos', 'dos',
+            'sql injection', 'xss', 'csrf', 'buffer overflow', 'privilege escalation',
+            'exploit', 'attack', 'compromise', 'breach'
         }
 
         # System/software keywords
         self.system_keywords = {
             'windows', 'linux', 'macos', 'microsoft', 'office', 'word', 'excel',
-            'powerpoint', 'adobe', 'java', 'apache', 'nginx', 'iis'
+            'powerpoint', 'adobe', 'java', 'apache', 'nginx', 'iis', 'system'
         }
 
     def extract_entities(self, text: str) -> List[Entity]:
@@ -66,7 +69,7 @@ class CybersecEntityExtractor(BaseExtractor):
         # Process with SpaCy
         doc = self.nlp(text)
 
-        # Extract standard NER entities (ORG, PERSON, GPE, etc.)
+        # 1. Extract standard NER entities (ORG, PERSON, GPE, DATE)
         for ent in doc.ents:
             entity = Entity(
                 text=ent.text,
@@ -78,15 +81,15 @@ class CybersecEntityExtractor(BaseExtractor):
             )
             entities.append(entity)
 
-        # Extract pattern-based entities
+        # 2. Extract pattern-based entities (CVE, IP, hashes, etc.)
         pattern_entities = self._extract_pattern_entities(text)
         entities.extend(pattern_entities)
 
-        # Extract cybersecurity-specific entities
+        # 3. Extract cybersecurity-specific entities (MALWARE, ATTACK_PATTERN, etc.)
         cybersec_entities = self._extract_cybersec_entities(text, doc)
         entities.extend(cybersec_entities)
 
-        # Deduplicate and enhance
+        # 4. Deduplicate
         entities = self._deduplicate_entities(entities)
 
         self._logger.info(f"Extracted {len(entities)} entities")
@@ -100,7 +103,8 @@ class CybersecEntityExtractor(BaseExtractor):
             'GPE': 'LOCATION',
             'PRODUCT': 'SYSTEM',
             'DATE': 'DATE',
-            'CARDINAL': 'NUMBER'
+            'CARDINAL': 'NUMBER',
+            'TIME': 'TIME'
         }
         return mapping.get(spacy_label, spacy_label)
 
@@ -123,43 +127,131 @@ class CybersecEntityExtractor(BaseExtractor):
         return entities
 
     def _extract_cybersec_entities(self, text: str, doc) -> List[Entity]:
-        """Extract cybersecurity-specific entities with better patterns"""
+        """Extract cybersecurity-specific entities"""
         entities = []
+        text_lower = text.lower()
 
-        # Look for "X is the author of Y" patterns
-        author_pattern = re.compile(
-            r'(\w+(?:\s+\w+)?)\s+is\s+the\s+author\s+of\s+(?:the\s+)?(\w+)',
-            re.IGNORECASE
-        )
+        # 1. Look for "X is the author of Y" patterns
+        author_patterns = [
+            (r'(\w+(?:\s+\w+)?)\s+is\s+the\s+author\s+of\s+(?:the\s+)?(\w+)', 'author'),
+            (r'(\w+(?:\s+\w+)?)\s+authored\s+(?:the\s+)?(\w+)', 'authored'),
+            (r'(\w+)\s+created\s+by\s+(\w+(?:\s+\w+)?)', 'created_reverse'),
+            (r'(\w+(?:\s+\w+)?)\s+developed\s+(?:the\s+)?(\w+)', 'developed')
+        ]
 
-        for match in author_pattern.finditer(text):
-            author = match.group(1)
-            creation = match.group(2)
+        for pattern, pattern_type in author_patterns:
+            for match in re.finditer(pattern, text, re.IGNORECASE):
+                if pattern_type == 'created_reverse':
+                    creation = match.group(1)
+                    author = match.group(2)
+                else:
+                    author = match.group(1)
+                    creation = match.group(2)
 
-            # Add author as PERSON
-            entities.append(Entity(
-                text=author,
-                label='PERSON',
-                start_pos=match.start(1),
-                end_pos=match.end(1),
-                confidence=0.95,
-                metadata={'role': 'author'}
-            ))
+                # Add author as PERSON (or ORGANIZATION if detected)
+                entities.append(Entity(
+                    text=author,
+                    label='PERSON',  # Will be refined later if it's an org
+                    start_pos=match.start(
+                        2 if pattern_type == 'created_reverse' else 1),
+                    end_pos=match.end(2 if pattern_type ==
+                                      'created_reverse' else 1),
+                    confidence=0.92,
+                    metadata={'role': 'author', 'pattern': pattern_type}
+                ))
 
-            # Add creation as MALWARE
-            entities.append(Entity(
-                text=creation,
-                label='MALWARE',
-                start_pos=match.start(2),
-                end_pos=match.end(2),
-                confidence=0.95,
-                metadata={'created_by': author}
-            ))
+                # Add creation as MALWARE
+                entities.append(Entity(
+                    text=creation,
+                    label='MALWARE',
+                    start_pos=match.start(
+                        1 if pattern_type == 'created_reverse' else 2),
+                    end_pos=match.end(1 if pattern_type ==
+                                      'created_reverse' else 2),
+                    confidence=0.92,
+                    metadata={'created_by': author, 'pattern': pattern_type}
+                ))
 
-        # Existing malware keyword detection...
-        # (keep your current code)
+        # 2. Extract malware by keyword matching
+        for token in doc:
+            token_lower = token.text.lower()
+            if token_lower in self.malware_keywords:
+                # Try to get full name (may be multi-word)
+                start = token.idx
+                end = token.idx + len(token.text)
+
+                # Extend to include adjacent capitalized words or version numbers
+                full_name = self._get_full_entity_name(text, start, end, doc)
+
+                entity = Entity(
+                    text=full_name,
+                    label='MALWARE',
+                    start_pos=start,
+                    end_pos=start + len(full_name),
+                    confidence=0.88,
+                    metadata={'extraction_method': 'keyword_match'}
+                )
+                entities.append(entity)
+
+        # 3. Extract attack patterns
+        for keyword in self.attack_keywords:
+            for match in re.finditer(re.escape(keyword), text_lower):
+                entity = Entity(
+                    text=text[match.start():match.end()],
+                    label='ATTACK_PATTERN',
+                    start_pos=match.start(),
+                    end_pos=match.end(),
+                    confidence=0.85,
+                    metadata={'extraction_method': 'keyword_match'}
+                )
+                entities.append(entity)
+
+        # 4. Extract systems/software
+        for keyword in self.system_keywords:
+            for match in re.finditer(r'\b' + re.escape(keyword) + r'\b', text_lower):
+                # Get actual text (preserve capitalization)
+                actual_text = text[match.start():match.end()]
+
+                entity = Entity(
+                    text=actual_text,
+                    label='SYSTEM',
+                    start_pos=match.start(),
+                    end_pos=match.end(),
+                    confidence=0.82,
+                    metadata={'extraction_method': 'keyword_match'}
+                )
+                entities.append(entity)
 
         return entities
+    
+    def _get_full_entity_name(self, text: str, start: int, end: int, doc) -> str:
+        """Extend entity span to capture full name (e.g., 'GinWui rootkit')"""
+        extended_text = text[start:end]
+
+        # Look ahead for related words
+        pos = end
+        while pos < len(text) and text[pos].isspace():
+            pos += 1
+
+        # Capture next word if it's capitalized, a number, or common suffix
+        while pos < len(text):
+            word_end = pos
+            while word_end < len(text) and (text[word_end].isalnum() or text[word_end] in '.-_'):
+                word_end += 1
+
+            next_word = text[pos:word_end].lower()
+
+            # Common malware/software suffixes
+            if next_word in ['trojan', 'backdoor', 'rootkit', 'worm', 'dropper', 'loader',
+                             'version', 'v', 'beta', 'attack', 'malware']:
+                extended_text = text[start:word_end]
+                pos = word_end
+                while pos < len(text) and text[pos].isspace():
+                    pos += 1
+            else:
+                break
+
+        return extended_text.strip()
 
     def _get_entity_span(self, text: str, start: int, end: int, doc) -> str:
         """Extend entity span to capture full name"""
@@ -188,8 +280,9 @@ class CybersecEntityExtractor(BaseExtractor):
         unique_entities = []
 
         for entity in entities:
-            # Create key based on text and position
-            key = (entity.text.lower(), entity.start_pos, entity.end_pos)
+            # Create key based on normalized text and position
+            key = (entity.text.lower().strip(),
+                   entity.start_pos, entity.end_pos)
 
             if key not in seen or entity.confidence > seen[key].confidence:
                 seen[key] = entity
@@ -200,43 +293,155 @@ class CybersecEntityExtractor(BaseExtractor):
         """Extract relations using dependency parsing and patterns"""
         relations = []
 
-        # Process text with SpaCy
-        doc = self.nlp(text)
-
-        # Define relation patterns
+        # Define comprehensive relation patterns
         relation_patterns = {
-            'CREATED_BY': ['created by', 'authored by', 'developed by', 'written by'],
-            'EXPLOITS': ['exploits', 'targets', 'attacks', 'compromises'],
-            'USES': ['uses', 'utilizes', 'employs', 'leverages'],
-            'AFFECTS': ['affects', 'impacts', 'targets'],
-            'MEMBER_OF': ['member of', 'part of', 'affiliated with']
+            'CREATED_BY': {
+                'patterns': [
+                    'is the author of',
+                    'authored',
+                    'created by',
+                    'developed by',
+                    'responsible for development',
+                    'author of'
+                ],
+                'entity_pairs': [
+                    ('MALWARE', 'PERSON'),
+                    ('MALWARE', 'ORGANIZATION')
+                ],
+                'bidirectional': True  # Can be reversed
+            },
+            'EXPLOITS': {
+                'patterns': [
+                    'exploits',
+                    'targets',
+                    'attacks',
+                    'compromises',
+                    'abuses',
+                    'exploit',
+                    'targeting'
+                ],
+                'entity_pairs': [
+                    ('MALWARE', 'CVE'),
+                    ('MALWARE', 'VULNERABILITY'),
+                    ('MALWARE', 'SYSTEM'),
+                    ('MALWARE', 'MS_VULN'),
+                    ('ATTACK_PATTERN', 'SYSTEM'),
+                    ('ORGANIZATION', 'SYSTEM')
+                ],
+                'bidirectional': False
+            },
+            'USES': {
+                'patterns': [
+                    'uses',
+                    'utilizes',
+                    'employs',
+                    'leverages',
+                    'deploys',
+                    'use'
+                ],
+                'entity_pairs': [
+                    ('MALWARE', 'SYSTEM'),
+                    ('ORGANIZATION', 'MALWARE'),
+                    ('PERSON', 'MALWARE'),
+                    ('ATTACK_PATTERN', 'MALWARE')
+                ],
+                'bidirectional': False
+            },
+            'AFFECTS': {
+                'patterns': [
+                    'affects',
+                    'impacts',
+                    'influences',
+                    'damages',
+                    'affect'
+                ],
+                'entity_pairs': [
+                    ('CVE', 'SYSTEM'),
+                    ('VULNERABILITY', 'SYSTEM'),
+                    ('MALWARE', 'SYSTEM'),
+                    ('MS_VULN', 'SYSTEM')
+                ],
+                'bidirectional': False
+            },
+            'MEMBER_OF': {
+                'patterns': [
+                    'member of',
+                    'part of',
+                    'belongs to',
+                    'affiliated with',
+                    'member'
+                ],
+                'entity_pairs': [
+                    ('PERSON', 'ORGANIZATION')
+                ],
+                'bidirectional': False
+            },
+            'OCCURRED_ON': {
+                'patterns': [
+                    'on',
+                    'began on',
+                    'started on',
+                    'commenced on',
+                    'took place',
+                    'occurred'
+                ],
+                'entity_pairs': [
+                    ('MALWARE', 'DATE'),
+                    ('ATTACK_PATTERN', 'DATE'),
+                    ('CVE', 'DATE')
+                ],
+                'bidirectional': False
+            }
         }
 
-        # Check entity pairs
+        # Check each entity pair
         for i, ent1 in enumerate(entities):
             for ent2 in entities[i+1:]:
-                # Skip if too far apart
-                if abs(ent1.start_pos - ent2.start_pos) > 200:
+                # Skip if entities are too far apart (>300 chars)
+                if abs(ent1.start_pos - ent2.start_pos) > 300:
                     continue
 
-                # Get context
+                # Get context between entities
                 start = min(ent1.start_pos, ent2.start_pos)
                 end = max(ent1.end_pos, ent2.end_pos)
-                context = text[start:end].lower()
 
-                # Check for relation patterns
-                for rel_type, patterns in relation_patterns.items():
-                    for pattern in patterns:
+                # Expand context window
+                context_start = max(0, start - 50)
+                context_end = min(len(text), end + 50)
+                context = text[context_start:context_end].lower()
+
+                # Try to find matching relation
+                for rel_type, rel_info in relation_patterns.items():
+                    # Check if entity pair is valid for this relation
+                    entity_pair = (ent1.label, ent2.label)
+                    reverse_pair = (ent2.label, ent1.label)
+
+                    is_valid_pair = entity_pair in rel_info['entity_pairs']
+                    is_valid_reverse = rel_info.get(
+                        'bidirectional', False) and reverse_pair in rel_info['entity_pairs']
+
+                    if not (is_valid_pair or is_valid_reverse):
+                        continue
+
+                    # Check for relation patterns in context
+                    for pattern in rel_info['patterns']:
                         if pattern in context:
+                            # Determine direction
+                            if is_valid_pair:
+                                head, tail = ent1, ent2
+                            else:
+                                head, tail = ent2, ent1
+
                             relation = Relation(
-                                head_entity=ent1,
-                                tail_entity=ent2,
+                                head_entity=head,
+                                tail_entity=tail,
                                 relation_type=rel_type,
-                                confidence=0.8,
-                                context=context[:200]
+                                confidence=0.85,
+                                context=context[:200],
+                                metadata={'pattern_matched': pattern}
                             )
                             relations.append(relation)
-                            break
+                            break  # Found a match, no need to check more patterns
 
         self._logger.info(f"Extracted {len(relations)} relations")
         return relations

@@ -149,11 +149,15 @@ class Neo4jManager:
         RETURN count(e) as created
         """
 
-        # Prepare entity data
+        # Prepare entity data with NORMALIZED IDs
         entity_data = []
         for entity in entities:
+            # Create normalized ID (remove position, normalize text)
+            normalized_text = entity.text.lower().strip()
+            entity_id = f"{entity.label}_{normalized_text}"
+
             entity_data.append({
-                'id': f"{entity.label}_{entity.text}_{entity.start_pos}",
+                'id': entity_id,  # CHANGED: Use normalized ID
                 'text': entity.text,
                 'type': entity.label,
                 'confidence': entity.confidence,
@@ -237,9 +241,13 @@ class Neo4jManager:
         # Prepare relation data
         relation_data = []
         for rel in relations:
+            # Use normalized IDs
+            head_id = f"{rel.head_entity.label}_{rel.head_entity.text.lower().strip()}"
+            tail_id = f"{rel.tail_entity.label}_{rel.tail_entity.text.lower().strip()}"
+
             relation_data.append({
-                'head_id': f"{rel.head_entity.label}_{rel.head_entity.text}_{rel.head_entity.start_pos}",
-                'tail_id': f"{rel.tail_entity.label}_{rel.tail_entity.text}_{rel.tail_entity.start_pos}",
+                'head_id': head_id,
+                'tail_id': tail_id,
                 'confidence': rel.confidence,
                 'context': rel.context[:200] if rel.context else ""
             })

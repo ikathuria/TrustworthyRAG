@@ -210,14 +210,97 @@ Cypher Query:
 
         query_lower = query.lower()
 
-        # Determine query type based on keywords
-        if any(word in query_lower for word in ['malware', 'trojan', 'backdoor', 'rootkit']):
+        # CREATOR/AUTHOR QUESTIONS - FIXED QUERY
+        if any(word in query_lower for word in ['who created', 'who authored', 'who developed', 'creator of', 'author of']):
+            entity_query = query_lower
+            for word in ['who', 'created', 'authored', 'developed', 'is', 'the', 'what', '?']:
+                entity_query = entity_query.replace(word, '')
+            entity_name = entity_query.strip()
+
+            cypher_query = """
+            MATCH (entity:Entity)
+            WHERE toLower(entity.text) CONTAINS $entity_name
+            
+            WITH entity
+            ORDER BY entity.confidence DESC
+            LIMIT $top_k
+            
+            OPTIONAL MATCH (creator)-[r:CREATED_BY]->(entity)
+            WHERE creator.type IN ['PERSON', 'ORGANIZATION']
+            
+            RETURN entity.text as entity_name,
+                entity.type as entity_type,
+                entity.confidence as confidence,
+                collect(DISTINCT creator.text) as creators,
+                collect(DISTINCT creator.type) as creator_types
+            """
+
+            try:
+                results = self.neo4j_manager.query_graph(
+                    cypher_query,
+                    {'top_k': top_k, 'entity_name': entity_name}
+                )
+
+                return {
+                    'method': 'graph_creator_query',
+                    'results': results,
+                    'cypher_query': cypher_query,
+                    'count': len(results),
+                    'success': True
+                }
+            except Exception as e:
+                self._logger.error(f"Creator query failed: {e}")
+
+        # WHAT IS X QUESTIONS - FIXED QUERY
+        elif any(word in query_lower for word in ['what is', 'describe', 'tell me about']):
+            entity_query = query_lower
+            for word in ['what', 'is', 'describe', 'tell', 'me', 'about', '?']:
+                entity_query = entity_query.replace(word, '')
+            entity_name = entity_query.strip()
+
+            cypher_query = """
+            MATCH (entity:Entity)
+            WHERE toLower(entity.text) CONTAINS $entity_name
+            
+            WITH entity
+            ORDER BY entity.confidence DESC
+            LIMIT $top_k
+            
+            OPTIONAL MATCH (entity)-[r]-(related)
+            WHERE related IS NOT NULL
+            
+            RETURN entity.text as entity_name,
+                entity.type as entity_type,
+                entity.confidence as confidence,
+                collect(DISTINCT {
+                    rel_type: type(r),
+                    related_entity: related.text,
+                    related_type: related.type
+                }) as relationships
+            """
+
+            try:
+                results = self.neo4j_manager.query_graph(
+                    cypher_query,
+                    {'top_k': top_k, 'entity_name': entity_name}
+                )
+
+                return {
+                    'method': 'graph_entity_query',
+                    'results': results,
+                    'cypher_query': cypher_query,
+                    'count': len(results),
+                    'success': True
+                }
+            except Exception as e:
+                self._logger.error(f"Entity query failed: {e}")
+
+        # MALWARE QUESTIONS - IMPROVED
+        elif any(word in query_lower for word in ['malware', 'trojan', 'backdoor', 'rootkit']):
             cypher_query = """
             MATCH (m:MALWARE)
-            OPTIONAL MATCH (m)-[r]->(target)
-            RETURN m.text as malware, m.confidence as confidence,
-                   type(r) as relationship, target.text as target
-            ORDER BY m.confidence DESC
+            RETURN DISTINCT m.text as malware, m.confidence as confidence
+            ORDER BY m.confidence DESC, m.text
             LIMIT $top_k
             """
         elif any(word in query_lower for word in ['organization', 'group', 'team']):
@@ -313,30 +396,64 @@ Cypher Query:
         }
 
     def answer_question(self, question: str, method: str = "hybrid") -> str:
-        """Answer question using Ollama"""
+        """Answer question using Ollama with better formatting"""
 
-        # Get context from graph
         context = self.retrieve(question, method=method)
 
         if not context.get('success', False):
             return "No relevant information found."
 
-        # Format context
+        # Special handling for creator questions
+        if context.get('method') == 'graph_creator_query' and context.get('results'):
+            result = context['results'][0]
+            if result.get('creators'):
+                # Filter None values
+                creators = [c for c in result['creators'] if c]
+                if creators:
+                    entity_name = result.get('entity_name', 'the entity')
+                    return f"{entity_name} was created by {', '.join(creators)}."
+
+        # Special handling for "what is" questions
+        if context.get('method') == 'graph_entity_query' and context.get('results'):
+            result = context['results'][0]
+            entity_name = result.get('entity_name', '')
+            entity_type = result.get('entity_type', '')
+            relationships = result.get('relationships', [])
+
+            answer_parts = [f"{entity_name} is a {entity_type}."]
+
+            # Add relationship info
+            creators = [r for r in relationships if r.get(
+                'rel_type') == 'CREATED_BY' and r.get('related_entity')]
+            if creators:
+                answer_parts.append(
+                    f"It was created by {', '.join([c['related_entity'] for c in creators])}.")
+
+            exploits = [r for r in relationships if r.get(
+                'rel_type') == 'EXPLOITS']
+            if exploits:
+                targets = [e['related_entity']
+                        for e in exploits if e.get('related_entity')]
+                if targets:
+                    answer_parts.append(f"It exploits {', '.join(targets[:3])}.")
+
+            return " ".join(answer_parts)
+
+        # Otherwise use LLM
         formatted_context = self._format_context(context)
 
         if not self.llm:
             return formatted_context
 
-        # Use Ollama to generate answer
         try:
-            prompt = f"""You are a cybersecurity threat intelligence analyst. Based on the following information from a knowledge graph, answer the question clearly and concisely.
+            prompt = f"""You are a cybersecurity analyst. Answer based on the knowledge graph data.
 
-    Context from Knowledge Graph:
+    Context:
     {formatted_context}
 
     Question: {question}
 
-    Provide a direct, factual answer based only on the information given. If the information is incomplete, state what is known.
+    Provide a clear, factual answer. If multiple creators/authors are mentioned, list them.
 
     Answer:"""
 
