@@ -15,6 +15,9 @@ chroma_db*
 *.env
 venv
 logs
+data/extracted_images/*.png
+data/extracted_text/*.txt
+data/processed/*.pkl
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs

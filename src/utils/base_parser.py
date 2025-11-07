@@ -1,3 +1,5 @@
+import json
+import pickle
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import List, Dict, Any
@@ -6,7 +8,7 @@ from datetime import datetime
 
 @dataclass
 class ParsedContent:
-    text: str
+    text: Dict[str, str]
     tables: List[Dict]
     images: List[Dict]
     metadata: Dict[str, Any]
@@ -16,6 +18,20 @@ class ParsedContent:
     def __post_init__(self):
         if self.parsed_at is None:
             self.parsed_at = datetime.now()
+    
+    def to_json(self) -> str:
+        return json.dumps({
+            "text": self.text,
+            "tables": self.tables,
+            "images": self.images,
+            "metadata": self.metadata,
+            "source_file": self.source_file,
+            "parsed_at": self.parsed_at.isoformat()
+        }, indent=4)
+
+    def to_pkl(self, file_path: str):
+        with open(file_path, 'wb') as f:
+            pickle.dump(self, f)
 
 
 class BaseParser(ABC):
@@ -42,3 +58,12 @@ class BaseParser(ABC):
             handler.setFormatter(formatter)
             logger.addHandler(handler)
         return logger
+
+    def load_from_json(self, json_str: str):
+        data = json.loads(json_str)
+        data['parsed_at'] = datetime.fromisoformat(data['parsed_at'])
+        return ParsedContent(**data)
+
+    def load_from_pkl(self, file_path: str):
+        with open(file_path, 'rb') as f:
+            return pickle.load(f)

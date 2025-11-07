@@ -1,0 +1,1 @@
+"""Folder to store extracted images from PDF documents."""

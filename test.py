@@ -1,4 +1,4 @@
-from src.mineru_parser import MinerUParser
+from src.preprocessing.document_parser import MinerUParser
 from src.cybersec_extractor import CybersecEntityExtractor
 
 # Parse document
