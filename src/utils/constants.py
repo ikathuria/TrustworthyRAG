@@ -18,6 +18,7 @@ MINERU_MODEL_NAME = "opendatalab/MinerU2.5-2509-1.2B"
 TRANSFORMER_EMBEDDING_MODEL = "all-MiniLM-L6-v2"
 
 # NEO4J - Graph Database
+NEO4J_DB = "neo4j"
 NEO4J_URI = "neo4j://127.0.0.1:7687"
 NEO4J_USERNAME = "neo4j"
 NEO4J_PASSWORD = "test1234"

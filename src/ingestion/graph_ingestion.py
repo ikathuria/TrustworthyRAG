@@ -3,57 +3,32 @@ from neo4j import GraphDatabase
 from neo4j.exceptions import ServiceUnavailable, AuthError
 import logging
 
+from langchain_experimental.graph_transformers.llm import LLMGraphTransformer
+from langchain_ollama import OllamaLLM
+
+from src.ingestion.neo4j_manager import Neo4jManager
 from src.utils.base_extractor import Entity, Relation
 
 
-class Neo4jManager:
+class GraphDBManager(Neo4jManager):
     """Manages Neo4j database operations for cybersecurity knowledge graph"""
 
-    def __init__(self, uri: str, username: str, password: str, database: str = "neo4j"):
-        self.uri = uri
-        self.username = username
-        self.password = password
-        self.database = database
+    def __init__(self, llm: OllamaLLM, uri: str, username: str, password: str, database: str):
+        """Initialize GraphDBManager with connection parameters"""
+        super().__init__(uri, username, password, database)
+        self.llm = llm
+        self.initialize_schema()
 
-        self._logger = self._setup_logging()
-        self.driver = None
-
-        self._connect()
-        self._initialize_schema()
-        self._initialize_vector_index()
-
-    def _setup_logging(self) -> logging.Logger:
-        logger = logging.getLogger(self.__class__.__name__)
-        logger.setLevel(logging.INFO)
-        if not logger.handlers:
-            handler = logging.StreamHandler()
-            formatter = logging.Formatter(
-                '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-            )
-            handler.setFormatter(formatter)
-            logger.addHandler(handler)
-        return logger
-
-    def _connect(self):
-        """Establish connection to Neo4j"""
-        try:
-            self.driver = GraphDatabase.driver(
-                self.uri,
-                auth=(self.username, self.password)
-            )
-
-            # Test connection
-            with self.driver.session(database=self.database) as session:
-                session.run("RETURN 1")
-
-            self._logger.info(f"Connected to Neo4j at {self.uri}")
-
-        except (ServiceUnavailable, AuthError) as e:
-            self._logger.error(f"Failed to connect to Neo4j: {str(e)}")
-            raise
-
-    def _initialize_schema(self):
+    def initialize_schema(self, allowed_nodes: List[str] = None, allowed_relationships: List[str] = None):
         """Initialize cybersecurity-specific graph schema"""
+        graph_transformer = LLMGraphTransformer(
+            llm=self.llm,
+            allowed_nodes=[],             # [] = let LLM decide
+            allowed_relationships=[],     # [] = let LLM decide
+            strict_mode=True,             # LLM filters to only allowed types if set
+            node_properties=True,         # Extract node properties from text
+            relationship_properties=True  # Extract relationship properties from text
+        )
         schema_queries = [
             "CREATE CONSTRAINT entity_id IF NOT EXISTS FOR (e:Entity) REQUIRE e.id IS UNIQUE",
             "CREATE CONSTRAINT cve_id IF NOT EXISTS FOR (c:CVE) REQUIRE c.id IS UNIQUE",
@@ -72,32 +47,6 @@ class Neo4jManager:
                     self._logger.debug(f"Schema note: {e}")
 
         self._logger.info("Neo4j schema initialized")
-
-    def _initialize_vector_index(self):
-        """Create GDS vector similarity index on Entity.embedding"""
-        index_query = """
-        CALL gds.index.drop('entityEmbeddingIndex') YIELD name
-        """
-        create_index_query = """
-        CALL gds.index.createVectorSimilarityIndex(
-            'entityEmbeddingIndex',
-            'Entity',
-            'embedding',
-            null
-        )
-        """
-        try:
-            with self.driver.session(database=self.database) as session:
-                # Drop outstanding old indexes if exists
-                try:
-                    session.run(index_query)
-                except Exception:
-                    pass
-                # Create new index
-                session.run(create_index_query)
-            self._logger.info("Vector similarity index created in Neo4j (GDS)")
-        except Exception as e:
-            self._logger.error(f"Error creating vector index: {e}")
 
     def ingest_entities_with_embedding(self, entities: List[Entity], embedding_dict: Dict[str, List[float]]):
         session = self.driver.session(database=self.database)
@@ -299,39 +248,3 @@ class Neo4jManager:
         except Exception as e:
             self._logger.error(f"Query failed: {str(e)}")
             raise
-
-    def get_statistics(self) -> Dict[str, Any]:
-        """Get database statistics"""
-        queries = {
-            'total_entities': "MATCH (e:Entity) RETURN count(e) as count",
-            'total_relations': "MATCH ()-[r]->() RETURN count(r) as count",
-            'entity_types': """
-                MATCH (e:Entity) 
-                RETURN e.type as type, count(e) as count 
-                ORDER BY count DESC
-            """,
-            'relation_types': """
-                MATCH ()-[r]->() 
-                RETURN type(r) as type, count(r) as count 
-                ORDER BY count DESC
-            """
-        }
-
-        stats = {}
-        for key, query in queries.items():
-            try:
-                result = self.query_graph(query)
-                if key in ['total_entities', 'total_relations']:
-                    stats[key] = result[0]['count'] if result else 0
-                else:
-                    stats[key] = result
-            except:
-                stats[key] = 0 if key.startswith('total') else []
-
-        return stats
-
-    def close(self):
-        """Close database connection"""
-        if self.driver:
-            self.driver.close()
-            self._logger.info("Neo4j connection closed")
