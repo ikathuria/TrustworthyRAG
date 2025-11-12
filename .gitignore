@@ -18,6 +18,7 @@ logs
 data/extracted_images/*.png
 data/extracted_text/*.txt
 data/processed/*.pkl
+data/raw/DocBench/*/
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
