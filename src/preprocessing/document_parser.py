@@ -13,8 +13,10 @@ import src.utils.constants as C
 
 
 class DocumentParser(BaseParser):
-    def __init__(self, config: Dict[str, Any]):
+    def __init__(self, config: Dict[str, Any], load_from_file: str = False, filepath: str = ""):
         super().__init__(config)
+        if load_from_file and filepath:
+            self.load_parsed_content([filepath])
         self._initialize_model()
 
     def _initialize_model(self):
@@ -32,6 +34,18 @@ class DocumentParser(BaseParser):
             model=self.model,
             processor=self.processor
         )
+
+    def load_parsed_content(self, parsed_pkl_paths: List[str]) -> List[ParsedContent]:
+        """Load previously parsed content from pickle files"""
+        self.parsed_content = []
+        for pkl_path in parsed_pkl_paths:
+            try:
+                parsed_content = ParsedContent.from_pkl(pkl_path)
+                self.parsed_content.append(parsed_content)
+                print(f"Loaded: {pkl_path}")
+            except Exception as e:
+                print(f"Failed to load {pkl_path}: {str(e)}")
+        return self.parsed_content
 
     def parse(self, file_path: str) -> ParsedContent:
         path = Path(file_path)
@@ -51,19 +65,19 @@ class DocumentParser(BaseParser):
             else:
                 raise ValueError(f"Unsupported file format: {path.suffix}")
 
-            parsed_content = self._process_blocks(
+            self.parsed_content = self._process_blocks(
                 blocks, str(file_path), page_images
             )
 
             # Save extracted content
-            self._save_parsed_content(parsed_content)
+            self._save_parsed_content(self.parsed_content)
 
-            return parsed_content
+            return self.parsed_content
 
         except Exception as e:
             self._logger.error(f"Error parsing {file_path}: {str(e)}")
-            if parsed_content:
-                return parsed_content
+            if self.parsed_content:
+                return self.parsed_content
             traceback.print_exc()
             raise
 

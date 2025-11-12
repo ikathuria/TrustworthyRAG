@@ -8,31 +8,37 @@ import logging
 class Entity:
     """Cybersecurity entity representation"""
     text: str                        # Entity text (e.g., "WannaCry")
-    label: str                       # Entity type (e.g., "MALWARE")
+    type: str                       # Entity type (e.g., "MALWARE")
     start_pos: int = 0               # Start position in text
     end_pos: int = 0                 # End position in text
     confidence: float = 1.0          # Confidence score
     source_doc: str = ""             # Source document
     metadata: Dict[str, Any] = None  # Additional metadata
+    properties: Dict[str, Any] = None  # Additional properties
 
     def __post_init__(self):
         if self.metadata is None:
             self.metadata = {}
+        if self.properties is None:
+            self.properties = {}
 
 
 @dataclass
 class Relation:
     """Relationship between entities"""
-    head_entity: Entity         # Source entity
-    tail_entity: Entity         # Target entity
-    relation_type: str          # Relation type (e.g., "EXPLOITS")
+    source: Entity              # Source entity
+    target: Entity              # Target entity
+    type: str                   # Relation type (e.g., "EXPLOITS")
     confidence: float = 0.8     # Confidence score
     context: str = ""           # Supporting context
     metadata: Dict[str, Any] = None
+    properties: Dict[str, Any] = None
 
     def __post_init__(self):
         if self.metadata is None:
             self.metadata = {}
+        if self.properties is None:
+            self.properties = {}
 
 
 class BaseExtractor(ABC):

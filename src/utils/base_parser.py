@@ -28,10 +28,19 @@ class ParsedContent:
             "source_file": self.source_file,
             "parsed_at": self.parsed_at.isoformat()
         }, indent=4)
+    
+    def from_json(json_str: str) -> 'ParsedContent':
+        data = json.loads(json_str)
+        data['parsed_at'] = datetime.fromisoformat(data['parsed_at'])
+        return ParsedContent(**data)
 
     def to_pkl(self, file_path: str):
         with open(file_path, 'wb') as f:
             pickle.dump(self, f)
+
+    def from_pkl(file_path: str) -> 'ParsedContent':
+        with open(file_path, 'rb') as f:
+            return pickle.load(f)
 
 
 class BaseParser(ABC):
