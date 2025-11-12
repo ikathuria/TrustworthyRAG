@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 
 # Import the main pipeline
-from pipeline.main_pipeline import CybersecKnowledgeGraphPipeline, create_pipeline
+from retriever.main_pipeline import CybersecKnowledgeGraphPipeline, create_pipeline
 
 
 def create_example_config():

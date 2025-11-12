@@ -6,7 +6,7 @@ from sentence_transformers import SentenceTransformer
 from neo4j import GraphDatabase
 import logging
 import numpy as np
-from src.ingestion.neo4j_manager import Neo4jManager
+from src.neo4j.neo4j_manager import Neo4jManager
 from src.utils.base_parser import ParsedContent
 
 

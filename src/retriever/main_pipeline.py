@@ -15,8 +15,8 @@ from typing import List
 from langchain_ollama import OllamaLLM
 
 from src.preprocessing.document_parser import DocumentParser
-from src.ingestion.graph_ingestion import GraphDBManager
-from src.ingestion.vector_ingestion import VectorDBManager
+from src.neo4j.graph_ingestion import GraphDBManager
+from src.neo4j.vector_ingestion import VectorDBManager
 from src.utils.base_parser import ParsedContent
 import src.utils.constants as C
 

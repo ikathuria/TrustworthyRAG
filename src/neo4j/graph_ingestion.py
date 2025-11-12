@@ -6,7 +6,7 @@ from langchain_experimental.graph_transformers.llm import LLMGraphTransformer
 from langchain_ollama import OllamaLLM
 from langchain_text_splitters.character import RecursiveCharacterTextSplitter
 from langchain_core.documents import Document
-from src.ingestion.neo4j_manager import Neo4jManager
+from src.neo4j.neo4j_manager import Neo4jManager
 from src.utils.base_extractor import Entity, Relation
 from src.utils.base_parser import ParsedContent
 
