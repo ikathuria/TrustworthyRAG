@@ -95,3 +95,22 @@ python src/attacks/retrieval_poisoning.py
 ```bash
 python src/rag_pipeline/pipeline.py --config configs/baseline.yaml
 ```
+
+
+| Paper/Framework/Concept | Primary Focus/Contribution to RAG | URL |
+| ----------------------- | --------------------------------- | --- |
+| RAG-Fusion: A New Take on Retrieval-Augmented Generation | Fusion technique using Reciprocal Rank Fusion (RRF) and query decomposition to aggregate scores. | https://arxiv.org/abs/2402.03367 |
+| Layered Query Retrieval (LQR) | Adaptive RAG framework using semantic rules for multi-hop query complexity classification and routing. | https://www.mdpi.com/2076-3417/14/23/11014 |
+| Joint Fusion and Encoding | Multimodal retrieval study advocating for early cross-modal fusion to enhance context interpretation. | https://arxiv.org/html/2502.20008v1 |
+| MIntOOD / MMIU Dataset | Multimodal intent classification and OOD detection using weighted feature fusion networks. | https://arxiv.org/abs/2412.12453 |
+| Survey of RAG Systems Enhancements | Provides a taxonomy of RAG architectures: retriever-centric, generator-centric, hybrid, and robustness-oriented. | https://arxiv.org/html/2506.00054v1 |
+| Hybrid GraphRAG Performance | Empirical study showing that Hybrid GraphRAG significantly outperforms traditional RAG in factual correctness. | https://arxiv.org/abs/2507.03608 |
+| RAG-Anything / MinerU | All-in-One Multimodal Document Processing framework for unified handling of complex, mixed-content documents. | https://github.com/HKUDS/RAG-Anything |
+| Adaptive-RAG / Query Complexity Models | Defines and categorizes query complexity (Low, Intermediate, High) to enable dynamic retrieval strategy selection. | https://openreview.net/forum?id=JLkgI0h7wy |
+| Corrective RAG (CRAG) / Self-RAG | Robustness techniques using retrieval evaluators and reflection tokens for on-demand assessment of document quality. | https://www.pinecone.io/learn/advanced-rag-techniques/ |
+| Madam-RAG | Multi-agent debate architecture designed to explicitly resolve inter-context knowledge conflict across retrieved documents.	| https://arxiv.org/html/2504.13079v2 |
+| The Role of Syntactic Complexity in IR | Experiments demonstrating that higher linguistic complexity (full sentences) can aid retrieval accuracy by decreasing ambiguity.	| https://pmc.ncbi.nlm.nih.gov/articles/PMC3366494/ |
+| Visual Complexity and Learning | Study linking less visually complex page layouts to higher learning success in information retrieval contexts.	| https://arxiv.org/abs/2501.05289 |
+| Dynamic Weighting Algorithms | Research on dynamically updating classifier weights (using metrics like G-mean) in ensemble learning to accommodate concept drift.	| https://www.mdpi.com/2227-7390/13/10/5924 |
+| Structured Fusion with Evaluation Guidance | Study demonstrating that integrating explicit evaluation guidance into the fusion process improves overall quality and consistency.	| https://arxiv.org/pdf/2509.01053 |
+| RARR | A revision-stage framework utilizing a consistency model to detect and correct disagreements (hallucinations) in the generation phase.	| https://www.mdpi.com/2227-7390/13/5/856 |

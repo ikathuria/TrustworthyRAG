@@ -1,7 +1,7 @@
 from typing import List, Dict, Any, Optional
 import logging
 
-from src.graph_ingestion import Neo4jManager
+from src.neo4j.neo4j_manager import Neo4jManager
 
 from langchain.embeddings import HuggingFaceEmbeddings
 from langchain_neo4j import Neo4jGraph

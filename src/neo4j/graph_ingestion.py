@@ -1,7 +1,5 @@
 import traceback
 from typing import List, Dict, Any, Optional
-from neo4j import GraphDatabase
-from neo4j.exceptions import ServiceUnavailable, AuthError
 from langchain_experimental.graph_transformers.llm import LLMGraphTransformer
 from langchain_ollama import OllamaLLM
 from langchain_text_splitters.character import RecursiveCharacterTextSplitter
