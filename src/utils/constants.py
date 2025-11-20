@@ -19,9 +19,9 @@ TRANSFORMER_EMBEDDING_MODEL = "all-MiniLM-L6-v2"
 
 # NEO4J - Graph Database
 NEO4J_DB = "neo4j"
-NEO4J_URI = "neo4j://127.0.0.1:7687"
+NEO4J_URI = "neo4j+s://db28e31b.databases.neo4j.io"
 NEO4J_USERNAME = "neo4j"
-NEO4J_PASSWORD = "test1234"
+NEO4J_PASSWORD = "U9N-cdOWgzANt8k-0pjDm6l6lqiniUSI8FIodgcMX2U"
 
 # Spacy
 SPACY_MODEL = "en_core_web_sm"

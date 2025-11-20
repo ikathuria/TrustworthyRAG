@@ -61,6 +61,7 @@ class Neo4jManager:
             raise
 
     def query_graph(self, query: str, params: Dict[str, Any] = None) -> List[Dict[str, Any]]:
+<<<<<<< Updated upstream
         """
         Execute a Cypher query and return results as list of dicts.
         
@@ -107,6 +108,67 @@ class Neo4jManager:
         except Exception as e:
             self._logger.error(f"Write transaction failed: {str(e)}")
             raise
+=======
+        """Execute a Cypher query and return results"""
+        if params is None:
+            params = {}
+        with self.driver.session(database=self.database) as session:
+            result = session.run(query, params)
+            return [record.data() for record in result]
+
+    def setup_indexes(self, embedding_dim: int = 384):
+        """
+        Create all three index types in Neo4j for QALF:
+        1. Vector index for embeddings
+        2. Full-text index for keyword search
+        3. Graph relationships are automatically indexed
+        """
+        with self.driver.session(database=self.database) as session:
+            try:
+                # 1. Vector index for Document embeddings
+                # Note: Neo4j 5.x+ uses CREATE VECTOR INDEX syntax
+                vector_index_query = f"""
+                CREATE VECTOR INDEX document-embeddings IF NOT EXISTS
+                FOR (n:Document) ON (n.embedding)
+                OPTIONS {{
+                    indexConfig: {{
+                        `vector.dimensions`: {embedding_dim},
+                        `vector.similarity_function`: 'cosine'
+                    }}
+                }}
+                """
+                try:
+                    session.run(vector_index_query)
+                    self._logger.info("✅ Vector index created/verified")
+                except Exception as e:
+                    # Fallback for older Neo4j versions or if index already exists
+                    self._logger.warning(f"Vector index creation: {e}")
+                
+                # 2. Full-text index for keyword search
+                fulltext_index_query = """
+                CALL db.index.fulltext.createNodeIndex(
+                    "documentFulltext",
+                    ["Document"],
+                    ["title", "content", "abstract"]
+                )
+                """
+                try:
+                    session.run(fulltext_index_query)
+                    self._logger.info("✅ Full-text index created/verified")
+                except Exception as e:
+                    # Index might already exist
+                    if "already exists" not in str(e).lower():
+                        self._logger.warning(f"Full-text index creation: {e}")
+                    else:
+                        self._logger.info("✅ Full-text index already exists")
+                
+                # 3. Graph relationships are automatically indexed by Neo4j
+                self._logger.info("✅ All indexes setup complete")
+                
+            except Exception as e:
+                self._logger.error(f"Error setting up indexes: {e}")
+                raise
+>>>>>>> Stashed changes
 
     def get_statistics(self) -> Dict[str, Any]:
         """Get database statistics"""

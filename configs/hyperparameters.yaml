@@ -1,0 +1,36 @@
+# QALF Hyperparameters
+
+# RRF (Reciprocal Rank Fusion) parameters
+rrf:
+  k: 60  # Standard RRF constant
+
+# Consensus-based fusion parameters
+consensus:
+  beta: 0.5  # Consensus influence factor (0.0 to 1.0)
+  # Higher beta = more weight reduction for low-consensus docs
+
+# Retrieval parameters
+retrieval:
+  top_k: 10  # Number of documents to retrieve per modality
+  top_k_final: 10  # Final number of documents after fusion
+
+# Embedding parameters
+embedding:
+  model: "all-MiniLM-L6-v2"  # Sentence transformer model
+  dimension: 384  # Embedding dimension (must match model)
+
+# Query analysis parameters
+query_analysis:
+  # Complexity thresholds (can be adjusted)
+  linguistic:
+    low_threshold: 10  # words
+    medium_threshold: 20  # words
+  semantic:
+    low_threshold: 2
+    medium_threshold: 5
+
+# Performance targets
+targets:
+  ndcg_improvement: 0.08  # 8% minimum improvement
+  robustness_improvement: 0.70  # 70% improvement in robustness
+

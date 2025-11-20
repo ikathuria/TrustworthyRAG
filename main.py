@@ -5,11 +5,11 @@ This script orchestrates:
 1. Document parsing (text, images, tables)
 2. Graph ingestion with LLM-based entity/relationship extraction
 3. Vector embedding generation and storage
-4. Adaptive query-based retrieval with QALF classifiers
+4. Adaptive query-based retrieval with QALF pipeline
 5. Interactive query interface
 
 Usage:
-    python main_pipeline_updated.py [--mode {ingest|query|both}]
+    python main.py [--mode {ingest|query|both}]
 """
 
 from pathlib import Path
@@ -20,9 +20,8 @@ import argparse
 from src.preprocessing.document_parser import DocumentParser
 from src.neo4j.graph_ingestion import GraphDBManager
 from src.neo4j.vector_ingestion import VectorDBManager
-from src.retrieval.hybrid_retrieval import HybridRetriever
-from src.qalf.query_complexity import QueryComplexityClassifier
-from src.qalf.query_intent import QueryIntentClassifier
+from src.neo4j.neo4j_manager import Neo4jManager
+from src.retriever.qalf_pipeline import QALFPipeline
 from src.utils.base_parser import ParsedContent
 import src.utils.constants as C
 
@@ -149,17 +148,11 @@ def query_pipeline():
     Run interactive query pipeline with QALF adaptive retrieval
     """
     print("\n" + "=" * 80)
-    print("INITIALIZING QUERY PIPELINE")
+    print("INITIALIZING QALF QUERY PIPELINE")
     print("=" * 80)
 
-    # Initialize components
-    print("\n1. Loading QALF Classifiers...")
-    complexity_classifier = QueryComplexityClassifier(nlp_model=C.SPACY_MODEL)
-    intent_classifier = QueryIntentClassifier()
-    print("✓ Classifiers loaded")
-
-    print("\n2. Connecting to Neo4j...")
-    from src.neo4j.neo4j_manager import Neo4jManager
+    # Initialize Neo4j connection
+    print("\n1. Connecting to Neo4j...")
     neo4j_manager = Neo4jManager(
         uri=C.NEO4J_URI,
         username=C.NEO4J_USERNAME,
@@ -168,12 +161,24 @@ def query_pipeline():
     )
     print("✓ Neo4j connected")
 
-    print("\n3. Initializing Hybrid Retriever...")
-    hybrid_retriever = HybridRetriever(
+    # Initialize QALF pipeline
+    print("\n2. Initializing QALF Pipeline...")
+    # Note: all-MiniLM-L6-v2 produces 384-dimensional embeddings
+    qalf_pipeline = QALFPipeline(
         neo4j_manager=neo4j_manager,
-        embedding_model=C.TRANSFORMER_EMBEDDING_MODEL
+        embedding_model=C.TRANSFORMER_EMBEDDING_MODEL,
+        embedding_dim=384  # Dimension for all-MiniLM-L6-v2
     )
-    print("✓ Hybrid retriever ready")
+    print("✓ QALF pipeline initialized")
+
+    # Setup indexes (one-time operation, safe to call multiple times)
+    print("\n3. Setting up QALF indexes...")
+    try:
+        qalf_pipeline.setup_indexes()
+        print("✓ QALF indexes ready")
+    except Exception as e:
+        print(f"⚠️  Index setup note: {e}")
+        print("Continuing (indexes may already exist)...")
 
     print("\n" + "=" * 80)
     print("ADAPTIVE QUERY INTERFACE (QALF)")
@@ -226,72 +231,58 @@ def query_pipeline():
         # Process query with QALF
         print(f"\n🔍 Processing: '{query}'")
 
-        # Step 1: Classify
-        print("\n1️⃣ QALF Classification:")
-        complexity = complexity_classifier.classify(query)
-        complexity_score = complexity_classifier.total_score(query)
-        intent = intent_classifier.classify(query)
-        weights = intent_classifier.get_routing_weights(intent)
-
-        print(f"   Complexity: {complexity_score} {complexity}")
-        print(f"   Intent: {intent}")
-        print(f"   Routing Weights: {weights}")
-
-        # Step 2: Retrieve with adaptive weights
-        print("\n2️⃣ Hybrid Retrieval:")
-        results = hybrid_retriever.retrieve(
-            query=query,
-            method="hybrid",
-            top_k=5,
-            weights=weights
-        )
-
-        if not results.get("success"):
-            print(
-                f"   ✗ Retrieval failed: {results.get('error', 'Unknown error')}")
-            continue
-
-        print(f"   ✓ Found {results['count']} results")
-        print(f"   Method: {results['method']}")
-        if 'weights_used' in results:
-            print(f"   Weights: {results['weights_used']}")
-
-        # Step 3: Display results
-        print("\n3️⃣ Top Results:")
-        print("-" * 80)
-
-        for idx, result in enumerate(results["results"], 1):
-            print(
-                f"\n[{idx}] Score: {result.get('fusion_score', result.get('score', 0.0)):.4f}")
-            print(
-                f"    Sources: {', '.join(result.get('retrieval_sources', [result.get('source', 'unknown')]))}")
-
-            # Display content based on result type
-            if 'entity' in result:
-                print(
-                    f"    Entity: {result['entity']} ({result.get('entity_type', 'N/A')})")
-                if result.get('related_entities'):
-                    print(
-                        f"    Related: {', '.join(result['related_entities'][:3])}")
-
-            content = result.get('content', '')
-            if content:
-                # Truncate long content
-                if len(content) > 300:
-                    content = content[:300] + "..."
-                print(f"    Content: {content}")
-
-            if result.get('modality'):
-                print(f"    Modality: {result['modality']}")
-
-            if result.get('document'):
-                print(f"    Document: {result['document']}")
-
-        print("\n" + "-" * 80)
+        try:
+            # Use QALF pipeline for retrieval
+            results = qalf_pipeline.qalf_retrieve(query, top_k=7)
+            
+            print("\n" + "=" * 80)
+            print("=== QALF Adaptive Output ===")
+            print("=" * 80)
+            
+            if results:
+                # Display complexity and intent from first result (all results have same metadata)
+                first_result = results[0]
+                complexity = first_result.get('complexity', 'N/A')
+                intent = first_result.get('intent', 'N/A')
+                modalities = first_result.get('modalities', [])
+                
+                print(f"\n📊 Query Analysis:")
+                print(f"  Complexity (4D): {complexity}")
+                print(f"  Intent: {intent}")
+                print(f"  Active Modalities: {', '.join(modalities)}")
+                
+                print(f"\n📄 Top Results [{len(results)}]:")
+                print("-" * 80)
+                
+                for result in results:
+                    print(f"\n[{result['rank']}] {result['title']}")
+                    print(f"    Score: {result['score']:.4f} | "
+                          f"Consensus: {result['consensus']:.2f}")
+                    
+                    # Try to get additional metadata if available
+                    doc_id = result.get('doc_id', '')
+                    if doc_id:
+                        print(f"    Doc ID: {doc_id}")
+                
+                print("\n" + "-" * 80)
+            else:
+                print("\n⚠️  No results found.")
+                print("This could mean:")
+                print("  - No documents match the query")
+                print("  - Indexes may need to be created")
+                print("  - Documents may need to be ingested first")
+            
+            print("=" * 80)
+            
+        except Exception as e:
+            print(f"\n❌ Error processing query: {e}")
+            import traceback
+            traceback.print_exc()
+            print()
 
     # Cleanup
     neo4j_manager.close()
-    print("\n✓ Pipeline closed")
+    print("\n✓ QALF pipeline closed")
 
 
 def main():

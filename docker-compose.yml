@@ -1,0 +1,35 @@
+version: '3.8'
+
+# NOTE: This docker-compose.yml is OPTIONAL if you're using a local Neo4j instance.
+# If you have Neo4j running locally, you can skip this file and use your local instance.
+# Just make sure your local Neo4j connection settings match those in src/utils/constants.py
+
+services:
+  neo4j:
+    image: neo4j:5.18-community  # Or latest 5.x community edition
+    container_name: qalf-neo4j
+    environment:
+      - NEO4J_AUTH=neo4j/password
+      - NEO4J_PLUGINS=["apoc"]
+      - NEO4J_dbms_security_procedures_unrestricted=apoc.*
+      - NEO4J_dbms_memory_heap_max__size=2G
+      - NEO4J_dbms_memory_pagecache_size=1G
+    ports:
+      - "7474:7474"  # HTTP UI (Browser UI)
+      - "7687:7687"  # Bolt protocol (Python driver)
+    volumes:
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+    healthcheck:
+      test: ["CMD", "cypher-shell", "-u", "neo4j", "-p", "password", "RETURN 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  neo4j_data:
+    driver: local
+  neo4j_logs:
+    driver: local
+

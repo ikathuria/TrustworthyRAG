@@ -13,6 +13,32 @@ TrustworthyRAG is a research project exploring the vulnerabilities of Retrieval-
 
 This project forms the basis of a **Master's thesis** aimed at building robust and transparent RAG systems in cybersecurity.
 
+## 🚀 QALF (Query-Adaptive Learned Fusion)
+
+**QALF** is a lightweight architecture for adversarial-aware multimodal retrieval-augmented generation (RAG) implemented in this project. QALF combines three orthogonal retrieval mechanisms (vector, graph, keyword) using a **single Neo4j 5.x+ database** to achieve both performance improvement and adversarial robustness.
+
+### Key Features
+
+- **4D Query Complexity Classification**: Linguistic, Semantic, Modality, and Contextual complexity analysis
+- **Intent-Based Routing**: 7 intent categories (factual, comparative, temporal, causal, definitional, visual/tabular, multi-hop)
+- **Consensus-Based Fusion**: Adaptive weighting based on cross-modality agreement
+- **Inherent Adversarial Defense**: Documents retrieved by multiple modalities receive higher weights
+- **Unified Neo4j Architecture**: All three modalities (vector, graph, keyword) in a single database
+
+### Architecture
+
+```
+QALF Pipeline:
+1. Query Analysis → Complexity (4D) + Intent (7 categories)
+2. Adaptive Routing → Select active modalities
+3. Multi-Modal Retrieval → Vector, Graph, Keyword (all from Neo4j)
+4. Consensus Computation → Cross-modality agreement scores
+5. Adaptive Weighting → w_i = α_intent × (1 - β × (1 - Consensus_mean_i))
+6. Weighted RRF Fusion → Score_QALF(d) = Σ (w_i × RRF_i(d))
+```
+
+See `examples/qalf_example.py` for usage examples.
+
 ## Key Features
 
 - Modular RAG pipeline with flexible retriever + generator integration.
@@ -78,22 +104,42 @@ cd TrustworthyRAG
 2. Install dependencies:
 ```bash
 pip install -r requirements.txt
+python -m spacy download en_core_web_sm
 ```
 
-3. Run baseline RAG pipeline:
+3. Start Neo4j:
+   - **Option A (Local Instance)**: Make sure your local Neo4j is running
+     - Default connection: `neo4j://127.0.0.1:7687`
+     - Update connection settings in `src/utils/constants.py` if needed
+   - **Option B (Docker)**: Start Neo4j using Docker Compose:
+     ```bash
+     docker-compose up -d
+     ```
+
+4. (Optional) Setup Neo4j indexes:
+```python
+from src.neo4j.neo4j_manager import Neo4jManager
+from src.retriever.qalf_pipeline import QALFPipeline
+
+neo4j_manager = Neo4jManager()
+pipeline = QALFPipeline(neo4j_manager)
+pipeline.setup_indexes()
+```
+
+5. Run QALF example:
+```bash
+python examples/qalf_example.py
+```
+
+6. Run baseline RAG pipeline:
 ```bash
 python src/rag_pipeline/pipeline.py --config configs/baseline.yaml
 ```
 
-4. Run adversarial attack scripts:
+7. Run adversarial attack scripts:
 ```bash
 python src/attacks/prompt_injection.py
 python src/attacks/retrieval_poisoning.py
-```
-
-5. Explore results in experiments/notebooks/:
-```bash
-python src/rag_pipeline/pipeline.py --config configs/baseline.yaml
 ```
 
 
