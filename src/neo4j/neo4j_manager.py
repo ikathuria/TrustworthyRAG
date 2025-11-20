@@ -61,7 +61,6 @@ class Neo4jManager:
             raise
 
     def query_graph(self, query: str, params: Dict[str, Any] = None) -> List[Dict[str, Any]]:
-<<<<<<< Updated upstream
         """
         Execute a Cypher query and return results as list of dicts.
         
@@ -108,13 +107,6 @@ class Neo4jManager:
         except Exception as e:
             self._logger.error(f"Write transaction failed: {str(e)}")
             raise
-=======
-        """Execute a Cypher query and return results"""
-        if params is None:
-            params = {}
-        with self.driver.session(database=self.database) as session:
-            result = session.run(query, params)
-            return [record.data() for record in result]
 
     def setup_indexes(self, embedding_dim: int = 384):
         """
@@ -168,7 +160,6 @@ class Neo4jManager:
             except Exception as e:
                 self._logger.error(f"Error setting up indexes: {e}")
                 raise
->>>>>>> Stashed changes
 
     def get_statistics(self) -> Dict[str, Any]:
         """Get database statistics"""
