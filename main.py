@@ -12,7 +12,7 @@ Usage:
     python main.py [--mode {ingest|query|both}]
 """
 
-from pathlib import Path
+from glob import glob
 from typing import List, Dict, Any
 from langchain_ollama import OllamaLLM
 import argparse
@@ -164,12 +164,18 @@ def query_pipeline():
     # Initialize QALF pipeline
     print("\n2. Initializing QALF Pipeline...")
     # Note: all-MiniLM-L6-v2 produces 384-dimensional embeddings
+    # Enable generator for RAG responses
+    enable_generator = True  # Set to False to disable generation
     qalf_pipeline = QALFPipeline(
         neo4j_manager=neo4j_manager,
         embedding_model=C.TRANSFORMER_EMBEDDING_MODEL,
-        embedding_dim=384  # Dimension for all-MiniLM-L6-v2
+        embedding_dim=384,  # Dimension for all-MiniLM-L6-v2
+        enable_generator=enable_generator,
+        generator_temperature=0.3
     )
     print("✓ QALF pipeline initialized")
+    if enable_generator and qalf_pipeline.generator:
+        print("✓ RAG Generator enabled")
 
     # Setup indexes (one-time operation, safe to call multiple times)
     print("\n3. Setting up QALF indexes...")
@@ -232,8 +238,14 @@ def query_pipeline():
         print(f"\n🔍 Processing: '{query}'")
 
         try:
-            # Use QALF pipeline for retrieval
-            results = qalf_pipeline.qalf_retrieve(query, top_k=7)
+            # Use QALF pipeline with generation if enabled
+            if qalf_pipeline.generator:
+                full_result = qalf_pipeline.qalf_retrieve_and_generate(query, top_k=7, generate=True)
+                results = full_result.get("retrieval", {}).get("results", [])
+                generation = full_result.get("generation")
+            else:
+                results = qalf_pipeline.qalf_retrieve(query, top_k=7)
+                generation = None
             
             print("\n" + "=" * 80)
             print("=== QALF Adaptive Output ===")
@@ -250,6 +262,24 @@ def query_pipeline():
                 print(f"  Complexity (4D): {complexity}")
                 print(f"  Intent: {intent}")
                 print(f"  Active Modalities: {', '.join(modalities)}")
+                
+                # Display generated response if available
+                if generation and generation.get("success"):
+                    print(f"\n💬 Generated Response:")
+                    print("-" * 80)
+                    print(generation.get("response", ""))
+                    print("-" * 80)
+                    
+                    # Display sources
+                    sources = generation.get("sources", [])
+                    if sources:
+                        print(f"\n📚 Sources ({len(sources)} documents):")
+                        for i, source in enumerate(sources, 1):
+                            print(f"  {i}. {source.get('title', 'Unknown')} "
+                                  f"({source.get('chunks_used', 0)} chunks)")
+                    
+                    print(f"\n⏱️  Generation time: {generation.get('generation_time', 0):.2f}s")
+                    print("-" * 80)
                 
                 print(f"\n📄 Top Results [{len(results)}]:")
                 print("-" * 80)
@@ -311,7 +341,9 @@ def main():
 
     try:
         if args.mode in ['ingest', 'both']:
-            print(f"\nFiles to ingest: {args.files}")
+            if '*' in args.files[0]:
+                args.files = [f for f in glob(args.files[0])]
+            print(f"Files to ingest: {args.files}")
             stats = ingest_pipeline(args.files)
 
             print("\n" + "=" * 80)

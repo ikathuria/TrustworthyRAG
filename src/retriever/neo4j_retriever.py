@@ -5,6 +5,7 @@ Implements all three retrieval modalities (vector, graph, keyword) using a singl
 
 from typing import List, Dict, Any, Optional
 import logging
+import time
 
 from src.neo4j.neo4j_manager import Neo4jManager
 from sentence_transformers import SentenceTransformer
@@ -67,12 +68,17 @@ class Neo4jMultiModalRetriever:
         Returns:
             List of floats representing the embedding
         """
+        start_time = time.time()
+        self._logger.debug(f"📊 Generating embedding for text (length: {len(text)} chars)")
         embedding = self.embedding_model.encode(text, convert_to_numpy=True)
+        elapsed_time = time.time() - start_time
+        self._logger.debug(f"✅ Embedding generated in {elapsed_time:.3f}s (dim: {len(embedding)})")
         return embedding.tolist()
 
     def extract_entities(self, query: str) -> List[str]:
         """
         Extract entity names from query using spaCy NER.
+        Enhanced with fallback heuristics for better entity detection.
         
         Args:
             query: Input query
@@ -80,15 +86,48 @@ class Neo4jMultiModalRetriever:
         Returns:
             List of entity names
         """
+        start_time = time.time()
+        self._logger.debug(f"🔎 Extracting entities from query: '{query[:100]}...'")
+        entities = []
+        
         try:
             import spacy
             nlp = spacy.load("en_core_web_sm")
             doc = nlp(query)
             entities = [ent.text for ent in doc.ents]
+            
+            # Fallback: extract potential entities if NER found nothing
+            if not entities:
+                # Look for quoted entities
+                import re
+                quoted = re.findall(r'"([^"]+)"', query)
+                entities.extend(quoted)
+                
+                # Look for capitalized words (potential proper nouns)
+                # Skip common question words
+                common_words = {"who", "what", "when", "where", "why", "how", "is", "are", "was", "were", "the", "a", "an"}
+                words = query.split()
+                capitalized = [w.strip('.,!?') for w in words if w[0].isupper() and w.lower() not in common_words]
+                entities.extend(capitalized)
+                
+                # Remove duplicates while preserving order
+                seen = set()
+                entities = [e for e in entities if e.lower() not in seen and not seen.add(e.lower())]
+            
+            elapsed_time = time.time() - start_time
+            self._logger.debug(f"✅ Extracted {len(entities)} entities in {elapsed_time:.3f}s: {entities}")
             return entities
         except Exception as e:
-            self._logger.warning(f"Entity extraction failed: {e}")
-            return []
+            elapsed_time = time.time() - start_time
+            self._logger.warning(f"⚠️  Entity extraction failed after {elapsed_time:.3f}s: {e}")
+            # Last resort: extract any capitalized words
+            import re
+            capitalized = re.findall(r'\b[A-Z][a-z]+\b', query)
+            common_words = {"Who", "What", "When", "Where", "Why", "How", "The", "A", "An"}
+            entities = [e for e in capitalized if e not in common_words]
+            if entities:
+                self._logger.debug(f"   Using fallback extraction: {entities}")
+            return entities
 
     def retrieve_vector(
         self,
@@ -97,6 +136,7 @@ class Neo4jMultiModalRetriever:
     ) -> List[Dict[str, Any]]:
         """
         Vector similarity search via Neo4j HNSW index.
+        Searches Chunk nodes (which have embeddings) and aggregates by Document.
         
         Args:
             query_embedding: Query embedding vector
@@ -105,16 +145,22 @@ class Neo4jMultiModalRetriever:
         Returns:
             List of documents with doc_id, title, and score
         """
+        start_time = time.time()
+        self._logger.info(f"🔍 [VECTOR] Starting vector similarity search (top_k={top_k}, embedding_dim={len(query_embedding)})")
         try:
-            # Neo4j 5.x+ vector search syntax
-            # Note: Syntax may vary by Neo4j version
+            # Search Chunk nodes (which have embeddings) and aggregate to Documents
+            # Use text_chunk_vector_index which is created during ingestion
             cypher_query = """
-            CALL db.index.vector.queryNodes('document-embeddings', $top_k, $query_embedding)
-            YIELD node, score
-            RETURN node.id AS doc_id, 
-                   COALESCE(node.title, node.id) AS title,
-                   score
-            ORDER BY score DESC
+            CALL db.index.vector.queryNodes('text_chunk_vector_index', $top_k * 3, $query_embedding)
+            YIELD node AS chunk, score
+            MATCH (chunk)-[:IN_DOCUMENT]->(doc:Document)
+            WITH doc, MAX(score) AS max_score, AVG(score) AS avg_score, COUNT(chunk) AS chunk_count
+            RETURN doc.id AS doc_id, 
+                   COALESCE(doc.source_file, doc.id) AS title,
+                   max_score AS score,
+                   avg_score,
+                   chunk_count
+            ORDER BY max_score DESC, chunk_count DESC
             LIMIT $top_k
             """
             
@@ -135,10 +181,18 @@ class Neo4jMultiModalRetriever:
                     "score": float(record.get("score", 0.0))
                 })
             
+            elapsed_time = time.time() - start_time
+            self._logger.info(f"✅ [VECTOR] Retrieved {len(formatted_results)} documents in {elapsed_time:.3f}s")
+            if formatted_results:
+                top_score = formatted_results[0].get("score", 0.0)
+                self._logger.debug(f"   Top score: {top_score:.4f}")
+            
             return formatted_results
             
         except Exception as e:
-            self._logger.error(f"Vector retrieval failed: {e}")
+            elapsed_time = time.time() - start_time
+            self._logger.warning(f"⚠️  [VECTOR] Vector retrieval failed after {elapsed_time:.3f}s: {e}")
+            self._logger.info("   Attempting fallback vector search...")
             # Fallback: manual cosine similarity if vector index not available
             return self._fallback_vector_search(query_embedding, top_k)
 
@@ -148,20 +202,25 @@ class Neo4jMultiModalRetriever:
         top_k: int = 10
     ) -> List[Dict[str, Any]]:
         """
-        Fallback vector search using manual cosine similarity.
+        Fallback vector search using manual cosine similarity on Chunk nodes.
         Used when vector index is not available.
         """
+        start_time = time.time()
+        self._logger.info(f"🔄 [VECTOR-FALLBACK] Using fallback cosine similarity search (top_k={top_k})")
         try:
+            # Search Chunk nodes and aggregate to Documents
             cypher_query = """
-            MATCH (doc:Document)
-            WHERE exists(doc.embedding) AND size(doc.embedding) = $dim
-            WITH doc, 
-                 gds.similarity.cosine(doc.embedding, $query_embedding) AS score
-            WHERE score > 0.5
+            MATCH (chunk:Chunk)
+            WHERE chunk.embedding IS NOT NULL AND size(chunk.embedding) = $dim
+            WITH chunk, 
+                 gds.similarity.cosine(chunk.embedding, $query_embedding) AS score
+            WHERE score > 0.3
+            MATCH (chunk)-[:IN_DOCUMENT]->(doc:Document)
+            WITH doc, MAX(score) AS max_score, AVG(score) AS avg_score, COUNT(chunk) AS chunk_count
             RETURN doc.id AS doc_id,
-                   COALESCE(doc.title, doc.id) AS title,
-                   score
-            ORDER BY score DESC
+                   COALESCE(doc.source_file, doc.id) AS title,
+                   max_score AS score
+            ORDER BY max_score DESC, chunk_count DESC
             LIMIT $top_k
             """
             
@@ -182,10 +241,14 @@ class Neo4jMultiModalRetriever:
                     "score": float(record.get("score", 0.0))
                 })
             
+            elapsed_time = time.time() - start_time
+            self._logger.info(f"✅ [VECTOR-FALLBACK] Retrieved {len(formatted_results)} documents in {elapsed_time:.3f}s")
+            
             return formatted_results
             
         except Exception as e:
-            self._logger.error(f"Fallback vector search failed: {e}")
+            elapsed_time = time.time() - start_time
+            self._logger.error(f"❌ [VECTOR-FALLBACK] Fallback search failed after {elapsed_time:.3f}s: {e}")
             return []
 
     def retrieve_keyword(
@@ -195,6 +258,7 @@ class Neo4jMultiModalRetriever:
     ) -> List[Dict[str, Any]]:
         """
         Full-text keyword search via Neo4j Lucene index.
+        Searches Chunk nodes and aggregates by Document.
         
         Args:
             query_string: Query text
@@ -203,14 +267,20 @@ class Neo4jMultiModalRetriever:
         Returns:
             List of documents with doc_id, title, and score
         """
+        start_time = time.time()
+        self._logger.info(f"🔍 [KEYWORD] Starting full-text keyword search (top_k={top_k}, query: '{query_string[:100]}...')")
         try:
+            # Try searching Chunk fulltext index first (chunk_fulltext from setup_indexes)
+            # If that doesn't exist, fall back to searching Chunk content directly
             cypher_query = """
-            CALL db.index.fulltext.queryNodes("documentFulltext", $query_string, {limit: $top_k})
-            YIELD node, score
-            RETURN node.id AS doc_id,
-                   COALESCE(node.title, node.id) AS title,
-                   score
-            ORDER BY score DESC
+            CALL db.index.fulltext.queryNodes("chunk_fulltext", $query_string, {limit: $top_k * 3})
+            YIELD node AS chunk, score
+            MATCH (chunk)-[:IN_DOCUMENT]->(doc:Document)
+            WITH doc, MAX(score) AS max_score, AVG(score) AS avg_score, COUNT(chunk) AS chunk_count
+            RETURN doc.id AS doc_id,
+                   COALESCE(doc.source_file, doc.id) AS title,
+                   max_score AS score
+            ORDER BY max_score DESC, chunk_count DESC
             LIMIT $top_k
             """
             
@@ -222,6 +292,28 @@ class Neo4jMultiModalRetriever:
                 }
             )
             
+            # If no results, try direct text search on Chunk content
+            if not results:
+                self._logger.debug("   Fulltext index search returned no results, trying direct text search...")
+                cypher_query = """
+                MATCH (chunk:Chunk)
+                WHERE chunk.content CONTAINS $query_string
+                MATCH (chunk)-[:IN_DOCUMENT]->(doc:Document)
+                WITH doc, COUNT(chunk) AS chunk_count
+                RETURN doc.id AS doc_id,
+                       COALESCE(doc.source_file, doc.id) AS title,
+                       chunk_count AS score
+                ORDER BY chunk_count DESC
+                LIMIT $top_k
+                """
+                results = self.neo4j_manager.query_graph(
+                    cypher_query,
+                    {
+                        "query_string": query_string,
+                        "top_k": top_k
+                    }
+                )
+            
             formatted_results = []
             for record in results:
                 formatted_results.append({
@@ -230,49 +322,147 @@ class Neo4jMultiModalRetriever:
                     "score": float(record.get("score", 0.0))
                 })
             
+            elapsed_time = time.time() - start_time
+            self._logger.info(f"✅ [KEYWORD] Retrieved {len(formatted_results)} documents in {elapsed_time:.3f}s")
+            if formatted_results:
+                top_score = formatted_results[0].get("score", 0.0)
+                self._logger.debug(f"   Top score: {top_score:.4f}")
+            
             return formatted_results
             
         except Exception as e:
-            self._logger.error(f"Keyword retrieval failed: {e}")
+            elapsed_time = time.time() - start_time
+            self._logger.error(f"❌ [KEYWORD] Keyword retrieval failed after {elapsed_time:.3f}s: {e}")
             return []
 
     def retrieve_graph(
         self,
         query_entities: List[str],
-        top_k: int = 10
+        top_k: int = 10,
+        query_text: str = None
     ) -> List[Dict[str, Any]]:
         """
         Graph traversal retrieval via Neo4j Cypher.
+        Enhanced to search for specific relationship types and handle relationship queries.
         
         Args:
             query_entities: List of entity names extracted from query
             top_k: Number of results to return
+            query_text: Original query text (for relationship detection)
         
         Returns:
             List of documents with doc_id, title, and score
         """
+        start_time = time.time()
+        
+        # Detect relationship keywords in query
+        relationship_keywords = []
+        if query_text:
+            query_lower = query_text.lower()
+            relationship_patterns = {
+                "CREATED": ["created", "creator", "made", "built", "developed"],
+                "OWNS": ["owns", "owner", "belongs to"],
+                "WROTE": ["wrote", "author", "written by"],
+                "DESIGNED": ["designed", "designer"],
+                "INVENTED": ["invented", "inventor"]
+            }
+            for rel_type, keywords in relationship_patterns.items():
+                if any(kw in query_lower for kw in keywords):
+                    relationship_keywords.append(rel_type)
+        
+        # If no entities but we have relationship keywords, try to find entities from query
+        if not query_entities and query_text:
+            # Extract potential entity names (capitalized words, quoted phrases)
+            import re
+            # Look for quoted entities
+            quoted = re.findall(r'"([^"]+)"', query_text)
+            # Look for capitalized words (potential proper nouns)
+            capitalized = re.findall(r'\b[A-Z][a-z]+\b', query_text)
+            query_entities = quoted + capitalized
+            # Remove common words
+            common_words = {"who", "what", "when", "where", "why", "how", "created", "created by"}
+            query_entities = [e for e in query_entities if e.lower() not in common_words]
+        
         if not query_entities:
+            self._logger.info(f"🔍 [GRAPH] No entities extracted, skipping graph retrieval")
             return []
         
+        self._logger.info(f"🔍 [GRAPH] Starting graph traversal search (top_k={top_k}, entities: {query_entities}, relationships: {relationship_keywords})")
         try:
-            cypher_query = """
-            MATCH (entity:Entity)
-            WHERE entity.name IN $query_entities OR entity.text IN $query_entities
-            MATCH (entity)-[:RELATED_TO|MENTIONS|CONTAINS*1..2]-(doc:Document)
-            RETURN DISTINCT doc.id AS doc_id,
-                   COALESCE(doc.title, doc.id) AS title,
-                   COUNT(*) AS score
-            ORDER BY score DESC
-            LIMIT $top_k
-            """
-            
-            results = self.neo4j_manager.query_graph(
-                cypher_query,
-                {
-                    "query_entities": query_entities,
-                    "top_k": top_k
-                }
-            )
+            # Build relationship pattern - include specific relationship types if detected
+            # Use a more flexible approach: search for entities and their relationships
+            # Boost score if specific relationship types are found
+            if relationship_keywords:
+                # Search for entities and check if they have relationships matching the keywords
+                # Use CASE to check relationship types dynamically
+                cypher_query = """
+                MATCH (entity:Entity)
+                WHERE entity.name IN $query_entities OR entity.text IN $query_entities
+                OPTIONAL MATCH (entity)-[r]->(related:Entity)
+                WITH entity, related, r, type(r) AS rel_type,
+                     CASE 
+                         WHEN related IS NOT NULL AND r IS NOT NULL AND 
+                              (rel_type IN $relationship_types OR 
+                               rel_type CONTAINS 'CREATED' OR 
+                               rel_type CONTAINS 'CREATED_BY' OR
+                               rel_type CONTAINS 'DEVELOPED' OR
+                               rel_type CONTAINS 'MADE')
+                         THEN 2.5
+                         WHEN related IS NOT NULL AND r IS NOT NULL 
+                         THEN 1.5
+                         ELSE 1.0 
+                     END AS relationship_boost
+                MATCH (entity)-[:EXTRACTED_FROM]->(source)
+                MATCH (source)-[:IN_DOCUMENT]->(doc:Document)
+                OPTIONAL MATCH (related)-[:EXTRACTED_FROM]->(source2)
+                OPTIONAL MATCH (source2)-[:IN_DOCUMENT]->(doc2:Document)
+                WITH DISTINCT doc, doc2, entity, related, relationship_boost
+                WITH COALESCE(doc, doc2) AS final_doc, SUM(relationship_boost) AS score
+                WHERE final_doc IS NOT NULL
+                RETURN final_doc.id AS doc_id,
+                       COALESCE(final_doc.source_file, final_doc.id) AS title,
+                       score
+                ORDER BY score DESC
+                LIMIT $top_k
+                """
+                
+                results = self.neo4j_manager.query_graph(
+                    cypher_query,
+                    {
+                        "query_entities": query_entities,
+                        "relationship_types": relationship_keywords,
+                        "top_k": top_k
+                    }
+                )
+            else:
+                # Generic relationship search (fallback) - search for any relationships
+                cypher_query = """
+                MATCH (entity:Entity)
+                WHERE entity.name IN $query_entities OR entity.text IN $query_entities
+                OPTIONAL MATCH (entity)-[r]->(related:Entity)
+                WITH entity, related, r,
+                     CASE WHEN related IS NOT NULL AND r IS NOT NULL THEN 1.5 ELSE 1.0 END AS relationship_boost
+                MATCH (entity)-[:EXTRACTED_FROM]->(source)
+                MATCH (source)-[:IN_DOCUMENT]->(doc:Document)
+                OPTIONAL MATCH (related)-[:EXTRACTED_FROM]->(source2)
+                OPTIONAL MATCH (source2)-[:IN_DOCUMENT]->(doc2:Document)
+                WITH DISTINCT doc, doc2, entity, related, relationship_boost
+                WITH COALESCE(doc, doc2) AS final_doc, SUM(relationship_boost) AS score
+                WHERE final_doc IS NOT NULL
+                RETURN final_doc.id AS doc_id,
+                       COALESCE(final_doc.source_file, final_doc.id) AS title,
+                       score
+                ORDER BY score DESC
+                LIMIT $top_k
+                """
+                
+                results = self.neo4j_manager.query_graph(
+                    cypher_query,
+                    {
+                        "query_entities": query_entities,
+                        "top_k": top_k
+                    }
+                )
             
             formatted_results = []
             for record in results:
@@ -282,9 +472,16 @@ class Neo4jMultiModalRetriever:
                     "score": float(record.get("score", 0.0))
                 })
             
+            elapsed_time = time.time() - start_time
+            self._logger.info(f"✅ [GRAPH] Retrieved {len(formatted_results)} documents in {elapsed_time:.3f}s")
+            if formatted_results:
+                top_score = formatted_results[0].get("score", 0.0)
+                self._logger.debug(f"   Top score: {top_score:.4f}")
+            
             return formatted_results
             
         except Exception as e:
-            self._logger.error(f"Graph retrieval failed: {e}")
+            elapsed_time = time.time() - start_time
+            self._logger.error(f"❌ [GRAPH] Graph retrieval failed after {elapsed_time:.3f}s: {e}")
             return []
 

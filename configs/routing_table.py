@@ -37,6 +37,10 @@ def route_to_modalities(complexity: Tuple[str, str, str, str], intent: str) -> L
     """
     linguistic, semantic, modality, contextual = complexity
     
+    # Relationship queries: graph + vector (need graph traversal for relationships)
+    if intent == "relationship":
+        return ["vector", "graph", "keyword"]
+    
     # Simple factual queries: vector only
     if intent == "factual_lookup" and semantic == "Low" and linguistic == "Low":
         return ["vector"]

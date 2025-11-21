@@ -1,4 +1,5 @@
 import spacy
+import logging
 from typing import Tuple
 
 
@@ -10,8 +11,11 @@ class QueryComplexityClassifier:
     """
 
     def __init__(self, nlp_model="en_core_web_sm"):
+        self._logger = logging.getLogger(self.__class__.__name__)
         try:
+            self._logger.debug(f"Loading spaCy model: {nlp_model}")
             self.nlp = spacy.load(nlp_model)
+            self._logger.debug(f"spaCy model loaded successfully")
         except OSError:
             raise ValueError(
                 f"spaCy model '{nlp_model}' not found. "
@@ -26,13 +30,26 @@ class QueryComplexityClassifier:
         doc = self.nlp(query)
         
         # Parse tree depth (max depth of dependency tree)
+        # Use a safer approach: find root and compute depth from root
         max_depth = 0
         for token in doc:
             depth = 0
             head = token.head
-            while head != token:
+            visited = set()  # Safety: prevent cycles
+            max_iterations = 100  # Safety: prevent infinite loops
+            
+            while head != token and depth < max_iterations:
+                if id(head) in visited:
+                    # Cycle detected, break
+                    self._logger.warning(f"Cycle detected in dependency tree for token: {token.text}")
+                    break
+                visited.add(id(head))
                 depth += 1
                 head = head.head
+            
+            if depth >= max_iterations:
+                self._logger.warning(f"Max iterations reached for token: {token.text}, using depth={max_iterations}")
+            
             max_depth = max(max_depth, depth)
         
         # Sentence length
@@ -146,12 +163,35 @@ class QueryComplexityClassifier:
             Tuple of (linguistic, semantic, modality, contextual)
             Each value is "Low", "Medium", or "High"
         """
-        linguistic = self.classify_linguistic(query)
-        semantic = self.classify_semantic(query)
-        modality = self.classify_modality(query)
-        contextual = self.classify_contextual(query)
+        import time
+        start_time = time.time()
+        self._logger.debug(f"Starting 4D complexity classification for query: '{query[:50]}...'")
         
-        return (linguistic, semantic, modality, contextual)
+        try:
+            self._logger.debug("  → Classifying linguistic complexity...")
+            linguistic = self.classify_linguistic(query)
+            self._logger.debug(f"    Linguistic: {linguistic}")
+            
+            self._logger.debug("  → Classifying semantic complexity...")
+            semantic = self.classify_semantic(query)
+            self._logger.debug(f"    Semantic: {semantic}")
+            
+            self._logger.debug("  → Classifying modality complexity...")
+            modality = self.classify_modality(query)
+            self._logger.debug(f"    Modality: {modality}")
+            
+            self._logger.debug("  → Classifying contextual complexity...")
+            contextual = self.classify_contextual(query)
+            self._logger.debug(f"    Contextual: {contextual}")
+            
+            elapsed = time.time() - start_time
+            self._logger.debug(f"4D complexity classification completed in {elapsed:.3f}s")
+            
+            return (linguistic, semantic, modality, contextual)
+        except Exception as e:
+            elapsed = time.time() - start_time
+            self._logger.error(f"Error in complexity classification after {elapsed:.3f}s: {e}")
+            raise
 
     def classify(self, query: str) -> dict:
         """

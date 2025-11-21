@@ -5,6 +5,7 @@ Implements the core QALF fusion algorithm.
 
 from typing import List, Dict, Any
 import logging
+import time
 
 
 class QALFFusion:
@@ -53,10 +54,12 @@ class QALFFusion:
         Returns:
             Dict mapping doc_id to consensus score (0.0 to 1.0)
         """
+        start_time = time.time()
         doc_to_modalities = {}
         num_active_modalities = len(retrieval_results)
         
         if num_active_modalities == 0:
+            self._logger.debug("No active modalities, returning empty consensus scores")
             return {}
         
         # Count how many modalities retrieved each document
@@ -73,6 +76,9 @@ class QALFFusion:
             doc_id: count / num_active_modalities
             for doc_id, count in doc_to_modalities.items()
         }
+        
+        elapsed_time = time.time() - start_time
+        self._logger.debug(f"Computed consensus for {len(consensus)} documents in {elapsed_time:.4f}s")
         
         return consensus
 
@@ -94,12 +100,14 @@ class QALFFusion:
         Returns:
             Dict mapping modality to adaptive weight
         """
+        start_time = time.time()
         weights = {}
         
         for modality, docs in retrieval_results.items():
             if not docs:
                 # No documents retrieved, use base weight
                 weights[modality] = alpha_intent.get(modality, 1.0)
+                self._logger.debug(f"Modality {modality}: No docs retrieved, using base weight {weights[modality]:.3f}")
                 continue
             
             # Get consensus scores for this modality's documents
@@ -122,8 +130,12 @@ class QALFFusion:
             self._logger.debug(
                 f"Modality {modality}: α={alpha:.3f}, "
                 f"Consensus_mean={consensus_mean:.3f}, "
-                f"w={weight:.3f}"
+                f"β={self.beta:.3f}, "
+                f"w={weight:.3f} (from {len(docs)} docs)"
             )
+        
+        elapsed_time = time.time() - start_time
+        self._logger.debug(f"Computed adaptive weights for {len(weights)} modalities in {elapsed_time:.4f}s")
         
         return weights
 
@@ -143,6 +155,7 @@ class QALFFusion:
         Returns:
             List of (doc_id, final_score) tuples, sorted by score descending
         """
+        start_time = time.time()
         rrf_scores = {}
         
         for modality, docs in retrieval_results.items():
@@ -169,6 +182,12 @@ class QALFFusion:
             key=lambda x: x[1],
             reverse=True
         )
+        
+        elapsed_time = time.time() - start_time
+        self._logger.debug(f"Fused {len(ranked_results)} documents using weighted RRF (k={self.k}) in {elapsed_time:.4f}s")
+        if ranked_results:
+            top_score = ranked_results[0][1]
+            self._logger.debug(f"Top fused score: {top_score:.6f}")
         
         return ranked_results
 

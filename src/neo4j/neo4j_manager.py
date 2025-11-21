@@ -2,6 +2,7 @@ from typing import List, Dict, Any
 from neo4j import GraphDatabase
 from neo4j.exceptions import ServiceUnavailable, AuthError
 import logging
+import time
 from src.utils.base_extractor import Entity, Relation
 import src.utils.constants as C
 
@@ -74,14 +75,35 @@ class Neo4jManager:
         if params is None:
             params = {}
 
+        start_time = time.time()
+        
+        # Log query details (truncate long queries for readability)
+        query_preview = query[:200] + "..." if len(query) > 200 else query
+        self._logger.info(f"🔍 Executing Neo4j query (preview): {query_preview}")
+        if params:
+            # Log params but truncate large values (like embeddings)
+            params_preview = {}
+            for k, v in params.items():
+                if isinstance(v, list) and len(v) > 10:
+                    params_preview[k] = f"[list of {len(v)} items]"
+                elif isinstance(v, str) and len(v) > 100:
+                    params_preview[k] = f"{v[:100]}..."
+                else:
+                    params_preview[k] = v
+            self._logger.debug(f"   Query params: {params_preview}")
+
         try:
             with self.driver.session(database=self.database) as session:
                 result = session.run(query, params)
-                return [dict(record) for record in result]
+                records = [dict(record) for record in result]
+                elapsed_time = time.time() - start_time
+                self._logger.info(f"✅ Query completed in {elapsed_time:.3f}s - Returned {len(records)} records")
+                return records
         except Exception as e:
-            self._logger.error(f"Query execution failed: {str(e)}")
-            self._logger.debug(f"Query: {query}")
-            self._logger.debug(f"Params: {params}")
+            elapsed_time = time.time() - start_time
+            self._logger.error(f"❌ Query execution failed after {elapsed_time:.3f}s: {str(e)}")
+            self._logger.debug(f"   Full query: {query}")
+            self._logger.debug(f"   Params: {params}")
             raise
 
     def execute_write(self, query: str, params: Dict[str, Any] = None) -> Any:
@@ -119,8 +141,9 @@ class Neo4jManager:
             try:
                 # 1. Vector index for Document embeddings
                 # Note: Neo4j 5.x+ uses CREATE VECTOR INDEX syntax
+                # Use underscore instead of hyphen for index name
                 vector_index_query = f"""
-                CREATE VECTOR INDEX document-embeddings IF NOT EXISTS
+                CREATE VECTOR INDEX document_embeddings IF NOT EXISTS
                 FOR (n:Document) ON (n.embedding)
                 OPTIONS {{
                     indexConfig: {{
@@ -137,22 +160,33 @@ class Neo4jManager:
                     self._logger.warning(f"Vector index creation: {e}")
                 
                 # 2. Full-text index for keyword search
+                # Try Neo4j 5.x+ CREATE FULLTEXT INDEX syntax first
                 fulltext_index_query = """
-                CALL db.index.fulltext.createNodeIndex(
-                    "documentFulltext",
-                    ["Document"],
-                    ["title", "content", "abstract"]
-                )
+                CREATE FULLTEXT INDEX documentFulltext IF NOT EXISTS
+                FOR (n:Document) ON EACH [n.title, n.content, n.abstract]
                 """
                 try:
                     session.run(fulltext_index_query)
                     self._logger.info("✅ Full-text index created/verified")
                 except Exception as e:
-                    # Index might already exist
-                    if "already exists" not in str(e).lower():
-                        self._logger.warning(f"Full-text index creation: {e}")
-                    else:
+                    # Fallback to procedure-based syntax for older versions
+                    if "already exists" not in str(e).lower() and "procedure" not in str(e).lower():
+                        try:
+                            fulltext_index_query_proc = """
+                            CALL db.index.fulltext.createNodeIndex(
+                                "documentFulltext",
+                                ["Document"],
+                                ["title", "content", "abstract"]
+                            )
+                            """
+                            session.run(fulltext_index_query_proc)
+                            self._logger.info("✅ Full-text index created/verified (using procedure)")
+                        except Exception as e2:
+                            self._logger.warning(f"Full-text index creation failed: {e2}")
+                    elif "already exists" in str(e).lower():
                         self._logger.info("✅ Full-text index already exists")
+                    else:
+                        self._logger.warning(f"Full-text index creation: {e}")
                 
                 # 3. Graph relationships are automatically indexed by Neo4j
                 self._logger.info("✅ All indexes setup complete")

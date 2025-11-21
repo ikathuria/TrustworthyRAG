@@ -42,6 +42,11 @@ ALPHA_WEIGHTS: Dict[str, Dict[str, float]] = {
         "vector": 0.2,
         "graph": 0.7,
         "keyword": 0.1
+    },
+    "relationship": {
+        "vector": 0.3,
+        "graph": 0.6,
+        "keyword": 0.1
     }
 }
 

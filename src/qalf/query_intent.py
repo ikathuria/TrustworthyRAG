@@ -1,4 +1,5 @@
 import re
+import logging
 from typing import Dict
 
 
@@ -9,11 +10,19 @@ class QueryIntentClassifier:
     """
 
     def __init__(self):
+        self._logger = logging.getLogger(self.__class__.__name__)
         # 7 Intent Categories as per QALF specification
         self.intent_patterns = {
             "factual_lookup": [
                 r"who is", r"what is", r"when did", r"how many",
                 r"define", r"explain", r"describe", r"find", r"list"
+            ],
+            "relationship": [
+                r"who created", r"who owns", r"who developed", r"who made",
+                r"who wrote", r"who designed", r"who built", r"who invented",
+                r"created by", r"owned by", r"developed by", r"made by",
+                r"wrote by", r"designed by", r"built by", r"invented by",
+                r"creator of", r"owner of", r"developer of", r"author of"
             ],
             "comparative": [
                 r"compare", r"vs", r"versus", r"difference between",
@@ -48,47 +57,74 @@ class QueryIntentClassifier:
             One of: factual_lookup, comparative, temporal, causal,
                     definitional, visual_tabular, multi_hop
         """
+        import time
+        start_time = time.time()
+        self._logger.debug(f"Classifying intent for query: '{query[:50]}...'")
+        
         query_lower = query.lower()
         
         # Check patterns in priority order (more specific first)
+        # Relationship patterns (check early - these are specific)
+        if any(re.search(pat, query_lower, re.IGNORECASE) 
+               for pat in self.intent_patterns.get("relationship", [])):
+            elapsed = time.time() - start_time
+            self._logger.debug(f"Intent classified as 'relationship' in {elapsed:.3f}s")
+            return "relationship"
+        
         # Multi-hop patterns (check first as they can overlap)
         if any(re.search(pat, query_lower, re.IGNORECASE) 
                for pat in self.intent_patterns["multi_hop"]):
             # Additional check: long queries with multiple clauses
             if ("and" in query_lower and len(query.split()) > 15) or query.count("?") > 1:
+                elapsed = time.time() - start_time
+                self._logger.debug(f"Intent classified as 'multi_hop' in {elapsed:.3f}s")
                 return "multi_hop"
         
         # Visual/tabular patterns
         if any(re.search(pat, query_lower, re.IGNORECASE) 
                for pat in self.intent_patterns["visual_tabular"]):
+            elapsed = time.time() - start_time
+            self._logger.debug(f"Intent classified as 'visual_tabular' in {elapsed:.3f}s")
             return "visual_tabular"
         
         # Comparative patterns
         if any(re.search(pat, query_lower, re.IGNORECASE) 
                for pat in self.intent_patterns["comparative"]):
+            elapsed = time.time() - start_time
+            self._logger.debug(f"Intent classified as 'comparative' in {elapsed:.3f}s")
             return "comparative"
         
         # Temporal patterns
         if any(re.search(pat, query_lower, re.IGNORECASE) 
                for pat in self.intent_patterns["temporal"]):
+            elapsed = time.time() - start_time
+            self._logger.debug(f"Intent classified as 'temporal' in {elapsed:.3f}s")
             return "temporal"
         
         # Causal patterns
         if any(re.search(pat, query_lower, re.IGNORECASE) 
                for pat in self.intent_patterns["causal"]):
+            elapsed = time.time() - start_time
+            self._logger.debug(f"Intent classified as 'causal' in {elapsed:.3f}s")
             return "causal"
         
         # Factual lookup patterns
         if any(re.search(pat, query_lower, re.IGNORECASE) 
                for pat in self.intent_patterns["factual_lookup"]):
+            elapsed = time.time() - start_time
+            self._logger.debug(f"Intent classified as 'factual_lookup' in {elapsed:.3f}s")
             return "factual_lookup"
         
         # Definitional patterns (fallback)
         if any(re.search(pat, query_lower, re.IGNORECASE) 
                for pat in self.intent_patterns["definitional"]):
+            elapsed = time.time() - start_time
+            self._logger.debug(f"Intent classified as 'definitional' in {elapsed:.3f}s")
             return "definitional"
         
         # Default fallback
+        elapsed = time.time() - start_time
+        self._logger.debug(f"Intent classified as 'factual_lookup' (default) in {elapsed:.3f}s")
         return "factual_lookup"
 
     def get_routing_weights(self, intent: str) -> Dict[str, float]:
