@@ -1,0 +1,994 @@
+
+(venv) C:\Users\ishani.kathuria\projects\TrustworthyRAG>python main.py --mode ingest --files data\raw\DocBench\0\P19-1598.pdf 
+
+================================================================================
+ADAPTIVE MULTIMODAL RAG PIPELINE WITH QALF
+================================================================================
+Mode: INGEST
+Files to ingest: ['data\\raw\\DocBench\\0\\P19-1598.pdf']
+
+================================================================================
+STEP 1: Parsing Documents
+================================================================================
+Predict: 100%|█████████████████████████████████████████████████████████████████████████████████| 1/1 [00:40<00:00, 40.45s/it]
+Predict: 100%|███████████████████████████████████████████████████████████████████████████████| 17/17 [01:21<00:00,  4.80s/it]
+Predict: 100%|█████████████████████████████████████████████████████████████████████████████████| 1/1 [00:39<00:00, 39.08s/it]
+Predict: 100%|███████████████████████████████████████████████████████████████████████████████| 16/16 [02:08<00:00,  8.01s/it]
+Predict: 100%|█████████████████████████████████████████████████████████████████████████████████| 1/1 [00:53<00:00, 53.88s/it]
+Predict: 100%|███████████████████████████████████████████████████████████████████████████████| 19/19 [01:47<00:00,  5.65s/it]
+Predict: 100%|█████████████████████████████████████████████████████████████████████████████████| 1/1 [00:40<00:00, 40.40s/it]
+Predict: 100%|███████████████████████████████████████████████████████████████████████████████| 18/18 [02:21<00:00,  7.86s/it]
+Predict: 100%|█████████████████████████████████████████████████████████████████████████████████| 1/1 [00:26<00:00, 26.78s/it]
+Predict: 100%|███████████████████████████████████████████████████████████████████████████████| 11/11 [02:01<00:00, 11.08s/it]
+Predict: 100%|█████████████████████████████████████████████████████████████████████████████████| 1/1 [01:04<00:00, 64.39s/it]
+Predict: 100%|███████████████████████████████████████████████████████████████████████████████| 25/25 [02:20<00:00,  5.63s/it]
+Predict: 100%|█████████████████████████████████████████████████████████████████████████████████| 1/1 [00:31<00:00, 31.08s/it]
+Predict: 100%|███████████████████████████████████████████████████████████████████████████████| 13/13 [02:05<00:00,  9.67s/it]
+Predict: 100%|█████████████████████████████████████████████████████████████████████████████████| 1/1 [00:26<00:00, 26.56s/it]
+Predict: 100%|███████████████████████████████████████████████████████████████████████████████| 11/11 [01:39<00:00,  9.04s/it]
+Predict: 100%|█████████████████████████████████████████████████████████████████████████████████| 1/1 [00:51<00:00, 51.74s/it]
+Predict: 100%|███████████████████████████████████████████████████████████████████████████████| 22/22 [01:43<00:00,  4.70s/it]
+Predict: 100%|█████████████████████████████████████████████████████████████████████████████████| 1/1 [00:36<00:00, 36.95s/it]
+Predict: 100%|███████████████████████████████████████████████████████████████████████████████| 15/15 [01:04<00:00,  4.32s/it]
+2025-11-20 19:47:54,328 - DocumentParser - INFO - Saved image: data\extracted_images\P19-1598_page1_0_Figure 1 Linked WikiText-2 Example A localized kno.png for data\raw\DocBench\0\P19-1598.pdf
+2025-11-20 19:47:54,340 - DocumentParser - INFO - Saved image: data\extracted_images\P19-1598_page3_1_Figure 2 KGLM Illustration When trying to generate.png for data\raw\DocBench\0\P19-1598.pdf
+2025-11-20 19:47:54,341 - DocumentParser - INFO - Saved text: data\extracted_text\P19-1598.txt for data\raw\DocBench\0\P19-1598.pdf
+2025-11-20 19:47:54,343 - DocumentParser - INFO - Saved parsed content: data\processed\P19-1598_parsed.pkl for data\raw\DocBench\0\P19-1598.pdf
+2025-11-20 19:47:54,348 - DocumentParser - INFO - Parsed: data\raw\DocBench\0\P19-1598.pdf
+
+✓ Parsed 1 documents successfully
+  - data\raw\DocBench\0\P19-1598.pdf: 33020 chars text, 2 images, 5 tables
+
+================================================================================
+STEP 2: Initializing LLM
+================================================================================
+✓ LLM initialized: Ollama (llama3.1:8b)
+
+================================================================================
+STEP 3: Graph Ingestion (LLM-based)
+================================================================================
+2025-11-20 19:47:55,730 - GraphDBManager - INFO - Connected to Neo4j at neo4j://127.0.0.1:7687
+2025-11-20 19:47:55,737 - GraphDBManager - INFO - LLM Graph Transformer initialized
+2025-11-20 19:47:55,828 - GraphDBManager - INFO - Constraint created: entity_id
+2025-11-20 19:47:55,872 - GraphDBManager - INFO - Constraint created: document_id
+2025-11-20 19:47:55,917 - GraphDBManager - INFO - Constraint created: chunk_id
+2025-11-20 19:47:55,964 - GraphDBManager - INFO - Constraint created: image_id
+2025-11-20 19:47:56,011 - GraphDBManager - INFO - Constraint created: table_id
+2025-11-20 19:50:23,371 - GraphDBManager - INFO - Multimodal ingestion complete for data\raw\DocBench\0\P19-1598.pdf: {'documents': 1, 'text_chunks': 58, 'images': 2, 'tables': 5, 'entities': 498, 'relationships': 355}
+2025-11-20 19:50:23,371 - GraphDBManager - INFO - Batch ingestion complete: {'documents': 1, 'text_chunks': 58, 'images': 2, 'tables': 5, 'entities': 498, 'relationships': 355}
+
+✓ Graph Ingestion Complete:
+  - Documents: 1
+  - Text Chunks: 58
+  - Images: 2
+  - Tables: 5
+  - Entities: 498
+  - Relationships: 355
+
+================================================================================
+STEP 4: Vector Embedding Generation
+================================================================================
+2025-11-20 19:50:23,437 - VectorDBManager - INFO - Connected to Neo4j at neo4j://127.0.0.1:7687
+C:\Users\ishani.kathuria\projects\TrustworthyRAG\src\neo4j\vector_ingestion.py:38: LangChainDeprecationWarning: The class `HuggingFaceEmbeddings` was deprecated in LangChain 0.2.2 and will be removed in 1.0. An updated version of the class exists in the `langchain-huggingface package and should be used instead. To use it run `pip install -U `langchain-huggingface` and import as `from `langchain_huggingface import HuggingFaceEmbeddings``.
+  self.text_embedder = HuggingFaceEmbeddings(
+C:\Users\ishani.kathuria\projects\TrustworthyRAG\src\neo4j\vector_ingestion.py:50: LangChainDeprecationWarning: The class `Neo4jVector` was deprecated in LangChain 0.3.8 and will be removed in 1.0. An updated version of the class exists in the `langchain-neo4j package and should be used instead. To use it run `pip install -U `langchain-neo4j` and import as `from `langchain_neo4j import Neo4jVector``.
+  self.text_vector_store = Neo4jVector(
+2025-11-20 19:50:26,177 - VectorDBManager - INFO - Vector stores initialized for all modalities
+2025-11-20 19:50:26,351 - VectorDBManager - INFO - Created vector index: text_chunk_vector_index
+2025-11-20 19:50:26,414 - VectorDBManager - INFO - Created vector index: image_vector_index
+2025-11-20 19:50:26,432 - VectorDBManager - INFO - Created vector index: table_vector_index
+2025-11-20 19:50:26,446 - VectorDBManager - INFO - Created vector index: entity_vector_index
+2025-11-20 19:50:38,862 - VectorDBManager - INFO - Embedding complete for data\raw\DocBench\0\P19-1598.pdf: {'text_embeddings': 58, 'image_embeddings': 2, 'table_embeddings': 5, 'entity_embeddings': 487}
+2025-11-20 19:50:38,862 - VectorDBManager - INFO - Batch embedding complete: {'text_embeddings': 58, 'image_embeddings': 2, 'table_embeddings': 5, 'entity_embeddings': 487}
+
+✓ Embedding Complete:
+  - Text Embeddings: 58
+  - Image Embeddings: 2
+  - Table Embeddings: 5
+  - Entity Embeddings: 487
+2025-11-20 19:50:38,863 - GraphDBManager - INFO - Neo4j connection closed
+2025-11-20 19:50:38,863 - VectorDBManager - INFO - Neo4j connection closed
+
+================================================================================
+INGESTION SUMMARY
+================================================================================
+✓ Parsed: 1 documents
+✓ Graph Nodes: 498 entities
+✓ Graph Relations: 355 relationships
+✓ Vector Embeddings: 552 total
+
+================================================================================
+✓ PIPELINE COMPLETE
+================================================================================
+
+(venv) C:\Users\ishani.kathuria\projects\TrustworthyRAG>python main.py --mode query                                           
+   
+================================================================================
+ADAPTIVE MULTIMODAL RAG PIPELINE WITH QALF
+================================================================================
+Mode: QUERY
+
+================================================================================
+INITIALIZING QALF QUERY PIPELINE
+================================================================================
+
+1. Connecting to Neo4j...
+2025-11-20 19:52:05,460 - Neo4jManager - INFO - Connected to Neo4j at neo4j://127.0.0.1:7687
+✓ Neo4j connected
+
+2. Initializing QALF Pipeline...
+2025-11-20 19:52:07,342 - Neo4jMultiModalRetriever - INFO - Loaded embedding model: all-MiniLM-L6-v2
+2025-11-20 19:52:08,378 - RAGGenerator - INFO - Initialized RAG Generator with LLM: llama3.1:8b
+2025-11-20 19:52:08,379 - QALFPipeline - INFO - RAG Generator enabled
+2025-11-20 19:52:08,379 - QALFPipeline - INFO - QALF Pipeline initialized
+✓ QALF pipeline initialized
+✓ RAG Generator enabled
+
+3. Setting up QALF indexes...
+2025-11-20 19:52:08,386 - Neo4jManager - INFO - ✅ Vector index created/verified
+2025-11-20 19:52:08,418 - Neo4jManager - INFO - ✅ Full-text index created/verified
+2025-11-20 19:52:08,418 - Neo4jManager - INFO - ✅ All indexes setup complete
+2025-11-20 19:52:08,441 - QALFPipeline - INFO - ✅ Neo4j indexes setup complete
+✓ QALF indexes ready
+
+================================================================================
+ADAPTIVE QUERY INTERFACE (QALF)
+================================================================================
+Commands:
+  - Enter a query to search
+  - 'stats' - Show database statistics
+  - 'help' - Show this help message
+  - 'quit' or 'exit' - Exit the interface
+================================================================================
+
+--------------------------------------------------------------------------------
+Query> What is the primary challenge addressed by the introduction of the Linked WikiText-2 dataset?
+
+🔍 Processing: 'What is the primary challenge addressed by the introduction of the Linked WikiText-2 dataset?'
+2025-11-20 19:54:36,640 - QALFPipeline - INFO - ================================================================================
+2025-11-20 19:54:36,640 - QALFPipeline - INFO - 🚀 QALF PIPELINE START - Query: 'What is the primary challenge addressed by the introduction of the Linked WikiText-2 dataset?'
+2025-11-20 19:54:36,640 - QALFPipeline - INFO - ================================================================================
+2025-11-20 19:54:36,640 - QALFPipeline - INFO - 📋 Configuration: top_k=7, retrieval_top_k=10
+2025-11-20 19:54:36,640 - QALFPipeline - INFO -
+📊 STEP 1: Query Analysis
+2025-11-20 19:54:36,640 - QALFPipeline - INFO - --------------------------------------------------------------------------------
+Cycle detected in dependency tree for token: What
+Cycle detected in dependency tree for token: the
+Cycle detected in dependency tree for token: primary
+Cycle detected in dependency tree for token: challenge
+Cycle detected in dependency tree for token: addressed
+Cycle detected in dependency tree for token: by
+Cycle detected in dependency tree for token: the
+Cycle detected in dependency tree for token: introduction
+Cycle detected in dependency tree for token: of
+Cycle detected in dependency tree for token: the
+Cycle detected in dependency tree for token: Linked
+Cycle detected in dependency tree for token: WikiText-2
+Cycle detected in dependency tree for token: dataset
+Cycle detected in dependency tree for token: ?
+2025-11-20 19:54:36,655 - QALFPipeline - INFO - ✅ Complexity: ('Medium', 'Low', 'Low', 'Medium') | Intent: factual_lookup (took 0.014s)
+2025-11-20 19:54:36,655 - QALFPipeline - INFO -
+🔄 STEP 2: Adaptive Routing
+2025-11-20 19:54:36,655 - QALFPipeline - INFO - --------------------------------------------------------------------------------
+2025-11-20 19:54:36,655 - QALFPipeline - INFO - ✅ Active modalities: ['vector', 'keyword'] (took 0.000s)
+2025-11-20 19:54:36,655 - QALFPipeline - INFO -
+🔧 STEP 3: Query Representation Generation
+2025-11-20 19:54:36,655 - QALFPipeline - INFO - --------------------------------------------------------------------------------
+2025-11-20 19:54:37,070 - QALFPipeline - INFO - ✅ Generated embedding (dim=384) and extracted 2 entities (took 0.415s)
+2025-11-20 19:54:37,070 - QALFPipeline - INFO -    Entities: ['Linked', 'WikiText-2']
+2025-11-20 19:54:37,071 - QALFPipeline - INFO -
+🔍 STEP 4: Multi-Modal Retrieval
+2025-11-20 19:54:37,071 - QALFPipeline - INFO - --------------------------------------------------------------------------------
+2025-11-20 19:54:37,071 - Neo4jMultiModalRetriever - INFO - 🔍 [VECTOR] Starting vector similarity search (top_k=10, embedding_dim=384)
+2025-11-20 19:54:37,071 - Neo4jManager - INFO - 🔍 Executing Neo4j query (preview):
+            CALL db.index.vector.queryNodes('text_chunk_vector_index', $top_k * 3, $query_embedding)
+            YIELD node AS chunk, score
+            MATCH (chunk)-[:IN_DOCUMENT]->(doc:Document)
+  ...
+2025-11-20 19:54:37,267 - Neo4jManager - INFO - ✅ Query completed in 0.196s - Returned 1 records
+2025-11-20 19:54:37,267 - Neo4jMultiModalRetriever - INFO - ✅ [VECTOR] Retrieved 1 documents in 0.196s
+2025-11-20 19:54:37,267 - QALFPipeline - INFO -    Vector: 1 results
+2025-11-20 19:54:37,267 - Neo4jMultiModalRetriever - INFO - 🔍 [KEYWORD] Starting full-text keyword search (top_k=10, query: 'What is the primary challenge addressed by the introduction of the Linked WikiText-2 dataset?...')
+2025-11-20 19:54:37,267 - Neo4jManager - INFO - 🔍 Executing Neo4j query (preview):
+            CALL db.index.fulltext.queryNodes("chunk_fulltext", $query_string, {limit: $top_k * 3})
+            YIELD node AS chunk, score
+            MATCH (chunk)-[:IN_DOCUMENT]->(doc:Document)
+   ...
+2025-11-20 19:54:37,344 - Neo4jManager - ERROR - ❌ Query execution failed after 0.078s: {code: Neo.ClientError.Procedure.ProcedureCallFailed} {message: Failed to invoke procedure `db.index.fulltext.queryNodes`: Caused by: java.lang.IllegalArgumentException: There is no such fulltext schema index: chunk_fulltext}
+2025-11-20 19:54:37,344 - Neo4jMultiModalRetriever - ERROR - ❌ [KEYWORD] Keyword retrieval failed after 0.078s: {code: Neo.ClientError.Procedure.ProcedureCallFailed} {message: Failed to invoke procedure `db.index.fulltext.queryNodes`: Caused by: java.lang.IllegalArgumentException: There is no such fulltext schema index: chunk_fulltext}
+2025-11-20 19:54:37,344 - QALFPipeline - INFO -    Keyword: 0 results
+2025-11-20 19:54:37,344 - QALFPipeline - INFO - ✅ Retrieval complete: 1 total documents across 2 modalities (took 0.274s)    
+2025-11-20 19:54:37,344 - QALFPipeline - INFO -
+🤝 STEP 5: Consensus Score Computation
+2025-11-20 19:54:37,344 - QALFPipeline - INFO - --------------------------------------------------------------------------------
+2025-11-20 19:54:37,344 - QALFPipeline - INFO - ✅ Computed consensus scores for 1 documents (took 0.000s)
+2025-11-20 19:54:37,346 - QALFPipeline - INFO -
+⚖️  STEP 6: Adaptive Weight Computation
+2025-11-20 19:54:37,346 - QALFPipeline - INFO - --------------------------------------------------------------------------------
+2025-11-20 19:54:37,346 - QALFPipeline - INFO -    Base weights (α_intent): {'vector': 0.7, 'graph': 0.2, 'keyword': 0.1}     
+2025-11-20 19:54:37,346 - QALFPipeline - INFO - ✅ Adaptive weights computed (took 0.000s)
+2025-11-20 19:54:37,346 - QALFPipeline - INFO -    vector: 0.5250
+2025-11-20 19:54:37,346 - QALFPipeline - INFO -    keyword: 0.1000
+2025-11-20 19:54:37,346 - QALFPipeline - INFO -
+🔀 STEP 7: Consensus-Based Fusion
+2025-11-20 19:54:37,346 - QALFPipeline - INFO - --------------------------------------------------------------------------------
+2025-11-20 19:54:37,346 - QALFPipeline - INFO - ✅ Fusion complete: 1 documents ranked (took 0.000s)
+2025-11-20 19:54:37,346 - QALFPipeline - INFO -
+📝 STEP 8: Result Formatting
+2025-11-20 19:54:37,346 - QALFPipeline - INFO - --------------------------------------------------------------------------------
+2025-11-20 19:54:37,346 - QALFPipeline - INFO - ✅ Formatted 1 results (took 0.000s)
+2025-11-20 19:54:37,346 - QALFPipeline - INFO - ================================================================================
+2025-11-20 19:54:37,346 - QALFPipeline - INFO - 🎉 QALF PIPELINE COMPLETE - Total time: 0.705s
+2025-11-20 19:54:37,347 - QALFPipeline - INFO -    Returned 1 documents
+2025-11-20 19:54:37,347 - QALFPipeline - INFO - ================================================================================
+2025-11-20 19:54:37,347 - RAGGenerator - INFO - ================================================================================
+2025-11-20 19:54:37,347 - RAGGenerator - INFO - 🤖 RAG GENERATION START - Query: 'What is the primary challenge addressed by the introduction of the Linked WikiText-2 dataset?'
+2025-11-20 19:54:37,347 - RAGGenerator - INFO - ================================================================================
+2025-11-20 19:54:37,347 - RAGGenerator - INFO -
+📚 STEP 1: Fetching Document Content
+2025-11-20 19:54:37,347 - RAGGenerator - INFO - --------------------------------------------------------------------------------
+2025-11-20 19:54:37,347 - RAGGenerator - INFO -    Retrieved 1 document IDs
+2025-11-20 19:54:37,347 - Neo4jManager - INFO - 🔍 Executing Neo4j query (preview):
+            MATCH (c:Chunk)-[:IN_DOCUMENT]->(doc:Document)
+            WHERE doc.id IN $doc_ids
+            WITH doc, c
+            ORDER BY doc.id, c.chunk_index ASC
+            WITH doc, collect(c)...
+2025-11-20 19:54:37,464 - Neo4jManager - INFO - ✅ Query completed in 0.117s - Returned 3 records
+2025-11-20 19:54:37,464 - RAGGenerator - INFO - ✅ Fetched 3 chunks from 1 documents (took 0.117s)
+2025-11-20 19:54:37,464 - RAGGenerator - INFO -
+📝 STEP 2: Building Context
+2025-11-20 19:54:37,464 - RAGGenerator - INFO - --------------------------------------------------------------------------------
+2025-11-20 19:54:37,464 - RAGGenerator - INFO - ✅ Context built: 1880 characters from 3 chunks (took 0.000s)
+2025-11-20 19:54:37,464 - RAGGenerator - INFO -
+💬 STEP 3: Generating Response
+2025-11-20 19:54:37,464 - RAGGenerator - INFO - --------------------------------------------------------------------------------
+2025-11-20 19:54:40,695 - RAGGenerator - INFO - ✅ Response generated (took 3.232s)
+2025-11-20 19:54:40,695 - RAGGenerator - INFO - ================================================================================
+2025-11-20 19:54:40,695 - RAGGenerator - INFO - 🎉 RAG GENERATION COMPLETE - Total time: 3.348s
+2025-11-20 19:54:40,695 - RAGGenerator - INFO -    Response length: 457 characters
+2025-11-20 19:54:40,695 - RAGGenerator - INFO -    Sources: 1 documents
+2025-11-20 19:54:40,695 - RAGGenerator - INFO - ================================================================================
+
+================================================================================
+=== QALF Adaptive Output ===
+================================================================================
+
+📊 Query Analysis:
+  Complexity (4D): ('Medium', 'Low', 'Low', 'Medium')
+  Intent: factual_lookup
+  Active Modalities: vector, keyword
+
+💬 Generated Response:
+--------------------------------------------------------------------------------
+The primary challenge addressed by the introduction of the Linked WikiText-2 dataset is that traditional language models are only capable of remembering facts seen at training time, and often have difficulty recalling them [Source: data\raw\DocBench\0\P19-1598.pdf, Chunk 1]. This limitation is a key motivation for developing the knowledge graph language model (KGLM), which aims to enable language models to render information they have never seen before.
+--------------------------------------------------------------------------------
+
+📚 Sources (1 documents):
+  1. data\raw\DocBench\0\P19-1598.pdf (3 chunks)
+
+⏱️  Generation time: 3.35s
+--------------------------------------------------------------------------------
+
+📄 Top Results [1]:
+--------------------------------------------------------------------------------
+
+[1] data\raw\DocBench\0\P19-1598.pdf
+    Score: 0.0086 | Consensus: 0.50
+    Doc ID: data\raw\DocBench\0\P19-1598.pdf
+
+--------------------------------------------------------------------------------
+================================================================================
+
+--------------------------------------------------------------------------------
+Query> What is the top-1 accuracy of the Oracle KGLM on birthdate prediction?
+
+🔍 Processing: 'What is the top-1 accuracy of the Oracle KGLM on birthdate prediction?'
+2025-11-20 19:56:08,012 - QALFPipeline - INFO - ================================================================================
+2025-11-20 19:56:08,012 - QALFPipeline - INFO - 🚀 QALF PIPELINE START - Query: 'What is the top-1 accuracy of the Oracle KGLM on birthdate prediction?'
+2025-11-20 19:56:08,013 - QALFPipeline - INFO - ================================================================================
+2025-11-20 19:56:08,013 - QALFPipeline - INFO - 📋 Configuration: top_k=7, retrieval_top_k=10
+2025-11-20 19:56:08,013 - QALFPipeline - INFO -
+📊 STEP 1: Query Analysis
+2025-11-20 19:56:08,013 - QALFPipeline - INFO - --------------------------------------------------------------------------------
+Cycle detected in dependency tree for token: What
+Cycle detected in dependency tree for token: the
+Cycle detected in dependency tree for token: top-1
+Cycle detected in dependency tree for token: accuracy
+Cycle detected in dependency tree for token: of
+Cycle detected in dependency tree for token: the
+Cycle detected in dependency tree for token: Oracle
+Cycle detected in dependency tree for token: KGLM
+Cycle detected in dependency tree for token: on
+Cycle detected in dependency tree for token: birthdate
+Cycle detected in dependency tree for token: prediction
+Cycle detected in dependency tree for token: ?
+2025-11-20 19:56:08,024 - QALFPipeline - INFO - ✅ Complexity: ('Medium', 'Low', 'Low', 'Low') | Intent: factual_lookup (took 0.011s)
+2025-11-20 19:56:08,024 - QALFPipeline - INFO -
+🔄 STEP 2: Adaptive Routing
+2025-11-20 19:56:08,024 - QALFPipeline - INFO - --------------------------------------------------------------------------------
+2025-11-20 19:56:08,024 - QALFPipeline - INFO - ✅ Active modalities: ['vector', 'keyword'] (took 0.000s)
+2025-11-20 19:56:08,024 - QALFPipeline - INFO -
+🔧 STEP 3: Query Representation Generation
+2025-11-20 19:56:08,024 - QALFPipeline - INFO - --------------------------------------------------------------------------------
+2025-11-20 19:56:08,253 - QALFPipeline - INFO - ✅ Generated embedding (dim=384) and extracted 1 entities (took 0.230s)
+2025-11-20 19:56:08,253 - QALFPipeline - INFO -    Entities: ['Oracle']
+2025-11-20 19:56:08,253 - QALFPipeline - INFO -
+🔍 STEP 4: Multi-Modal Retrieval
+2025-11-20 19:56:08,253 - QALFPipeline - INFO - --------------------------------------------------------------------------------
+2025-11-20 19:56:08,253 - Neo4jMultiModalRetriever - INFO - 🔍 [VECTOR] Starting vector similarity search (top_k=10, embedding_dim=384)
+2025-11-20 19:56:08,254 - Neo4jManager - INFO - 🔍 Executing Neo4j query (preview):
+            CALL db.index.vector.queryNodes('text_chunk_vector_index', $top_k * 3, $query_embedding)
+            YIELD node AS chunk, score
+            MATCH (chunk)-[:IN_DOCUMENT]->(doc:Document)
+  ...
+2025-11-20 19:56:08,260 - Neo4jManager - INFO - ✅ Query completed in 0.007s - Returned 1 records
+2025-11-20 19:56:08,261 - Neo4jMultiModalRetriever - INFO - ✅ [VECTOR] Retrieved 1 documents in 0.007s
+2025-11-20 19:56:08,261 - QALFPipeline - INFO -    Vector: 1 results
+2025-11-20 19:56:08,261 - Neo4jMultiModalRetriever - INFO - 🔍 [KEYWORD] Starting full-text keyword search (top_k=10, query: 'What is the top-1 accuracy of the Oracle KGLM on birthdate prediction?...')
+2025-11-20 19:56:08,261 - Neo4jManager - INFO - 🔍 Executing Neo4j query (preview):
+            CALL db.index.fulltext.queryNodes("chunk_fulltext", $query_string, {limit: $top_k * 3})
+            YIELD node AS chunk, score
+            MATCH (chunk)-[:IN_DOCUMENT]->(doc:Document)
+   ...
+2025-11-20 19:56:08,263 - Neo4jManager - ERROR - ❌ Query execution failed after 0.002s: {code: Neo.ClientError.Procedure.ProcedureCallFailed} {message: Failed to invoke procedure `db.index.fulltext.queryNodes`: Caused by: java.lang.IllegalArgumentException: There is no such fulltext schema index: chunk_fulltext}
+2025-11-20 19:56:08,263 - Neo4jMultiModalRetriever - ERROR - ❌ [KEYWORD] Keyword retrieval failed after 0.002s: {code: Neo.ClientError.Procedure.ProcedureCallFailed} {message: Failed to invoke procedure `db.index.fulltext.queryNodes`: Caused by: java.lang.IllegalArgumentException: There is no such fulltext schema index: chunk_fulltext}
+2025-11-20 19:56:08,263 - QALFPipeline - INFO -    Keyword: 0 results
+2025-11-20 19:56:08,263 - QALFPipeline - INFO - ✅ Retrieval complete: 1 total documents across 2 modalities (took 0.010s)    
+2025-11-20 19:56:08,263 - QALFPipeline - INFO -
+🤝 STEP 5: Consensus Score Computation
+2025-11-20 19:56:08,263 - QALFPipeline - INFO - --------------------------------------------------------------------------------
+2025-11-20 19:56:08,263 - QALFPipeline - INFO - ✅ Computed consensus scores for 1 documents (took 0.000s)
+2025-11-20 19:56:08,263 - QALFPipeline - INFO -
+⚖️  STEP 6: Adaptive Weight Computation
+2025-11-20 19:56:08,263 - QALFPipeline - INFO - --------------------------------------------------------------------------------
+2025-11-20 19:56:08,263 - QALFPipeline - INFO -    Base weights (α_intent): {'vector': 0.7, 'graph': 0.2, 'keyword': 0.1}     
+2025-11-20 19:56:08,263 - QALFPipeline - INFO - ✅ Adaptive weights computed (took 0.000s)
+2025-11-20 19:56:08,263 - QALFPipeline - INFO -    vector: 0.5250
+2025-11-20 19:56:08,263 - QALFPipeline - INFO -    keyword: 0.1000
+2025-11-20 19:56:08,263 - QALFPipeline - INFO -
+🔀 STEP 7: Consensus-Based Fusion
+2025-11-20 19:56:08,264 - QALFPipeline - INFO - --------------------------------------------------------------------------------
+2025-11-20 19:56:08,264 - QALFPipeline - INFO - ✅ Fusion complete: 1 documents ranked (took 0.001s)
+2025-11-20 19:56:08,264 - QALFPipeline - INFO -
+📝 STEP 8: Result Formatting
+2025-11-20 19:56:08,264 - QALFPipeline - INFO - --------------------------------------------------------------------------------
+2025-11-20 19:56:08,264 - QALFPipeline - INFO - ✅ Formatted 1 results (took 0.000s)
+2025-11-20 19:56:08,264 - QALFPipeline - INFO - ================================================================================
+2025-11-20 19:56:08,264 - QALFPipeline - INFO - 🎉 QALF PIPELINE COMPLETE - Total time: 0.252s
+2025-11-20 19:56:08,264 - QALFPipeline - INFO -    Returned 1 documents
+2025-11-20 19:56:08,264 - QALFPipeline - INFO - ================================================================================
+2025-11-20 19:56:08,264 - RAGGenerator - INFO - ================================================================================
+2025-11-20 19:56:08,264 - RAGGenerator - INFO - 🤖 RAG GENERATION START - Query: 'What is the top-1 accuracy of the Oracle KGLM on birthdate prediction?'
+2025-11-20 19:56:08,264 - RAGGenerator - INFO - ================================================================================
+2025-11-20 19:56:08,264 - RAGGenerator - INFO -
+📚 STEP 1: Fetching Document Content
+2025-11-20 19:56:08,264 - RAGGenerator - INFO - --------------------------------------------------------------------------------
+2025-11-20 19:56:08,264 - RAGGenerator - INFO -    Retrieved 1 document IDs
+2025-11-20 19:56:08,265 - Neo4jManager - INFO - 🔍 Executing Neo4j query (preview):
+            MATCH (c:Chunk)-[:IN_DOCUMENT]->(doc:Document)
+            WHERE doc.id IN $doc_ids
+            WITH doc, c
+            ORDER BY doc.id, c.chunk_index ASC
+            WITH doc, collect(c)...
+2025-11-20 19:56:08,269 - Neo4jManager - INFO - ✅ Query completed in 0.005s - Returned 3 records
+2025-11-20 19:56:08,269 - RAGGenerator - INFO - ✅ Fetched 3 chunks from 1 documents (took 0.006s)
+2025-11-20 19:56:08,269 - RAGGenerator - INFO -
+📝 STEP 2: Building Context
+2025-11-20 19:56:08,269 - RAGGenerator - INFO - --------------------------------------------------------------------------------
+2025-11-20 19:56:08,269 - RAGGenerator - INFO - ✅ Context built: 1880 characters from 3 chunks (took 0.000s)
+2025-11-20 19:56:08,269 - RAGGenerator - INFO -
+💬 STEP 3: Generating Response
+2025-11-20 19:56:08,269 - RAGGenerator - INFO - --------------------------------------------------------------------------------
+2025-11-20 19:56:11,573 - RAGGenerator - INFO - ✅ Response generated (took 3.304s)
+2025-11-20 19:56:11,573 - RAGGenerator - INFO - ================================================================================
+2025-11-20 19:56:11,573 - RAGGenerator - INFO - 🎉 RAG GENERATION COMPLETE - Total time: 3.309s
+2025-11-20 19:56:11,573 - RAGGenerator - INFO -    Response length: 621 characters
+2025-11-20 19:56:11,574 - RAGGenerator - INFO -    Sources: 1 documents
+2025-11-20 19:56:11,574 - RAGGenerator - INFO - ================================================================================
+
+================================================================================
+=== QALF Adaptive Output ===
+================================================================================
+
+📊 Query Analysis:
+  Complexity (4D): ('Medium', 'Low', 'Low', 'Low')
+  Intent: factual_lookup
+  Active Modalities: vector, keyword
+
+💬 Generated Response:
+--------------------------------------------------------------------------------
+Unfortunately, I must inform you that there is no information about the top-1 accuracy of the Oracle KGLM on birthdate prediction in the provided context.
+
+The retrieved documents only discuss the introduction of the knowledge graph language model (KGLM), its mechanisms for selecting and copying facts from a knowledge graph, and experimental results comparing the performance of different language models. However, there is no mention of specific accuracy metrics or results related to birthdate prediction.
+
+Therefore, I must say that the context does not contain enough information to answer your question accurately.
+--------------------------------------------------------------------------------
+
+📚 Sources (1 documents):
+  1. data\raw\DocBench\0\P19-1598.pdf (3 chunks)
+
+⏱️  Generation time: 3.31s
+--------------------------------------------------------------------------------
+
+📄 Top Results [1]:
+--------------------------------------------------------------------------------
+
+[1] data\raw\DocBench\0\P19-1598.pdf
+    Score: 0.0086 | Consensus: 0.50
+    Doc ID: data\raw\DocBench\0\P19-1598.pdf
+
+--------------------------------------------------------------------------------
+================================================================================
+
+--------------------------------------------------------------------------------
+Query> How many documents are there in the training set of the Linked WikiText-2 Corpus?
+
+🔍 Processing: 'How many documents are there in the training set of the Linked WikiText-2 Corpus?'
+2025-11-20 19:56:47,364 - QALFPipeline - INFO - ================================================================================
+2025-11-20 19:56:47,364 - QALFPipeline - INFO - 🚀 QALF PIPELINE START - Query: 'How many documents are there in the training set of the Linked WikiText-2 Corpus?'
+2025-11-20 19:56:47,364 - QALFPipeline - INFO - ================================================================================
+2025-11-20 19:56:47,364 - QALFPipeline - INFO - 📋 Configuration: top_k=7, retrieval_top_k=10
+2025-11-20 19:56:47,364 - QALFPipeline - INFO -
+📊 STEP 1: Query Analysis
+2025-11-20 19:56:47,364 - QALFPipeline - INFO - --------------------------------------------------------------------------------
+Cycle detected in dependency tree for token: How
+Cycle detected in dependency tree for token: many
+Cycle detected in dependency tree for token: documents
+Cycle detected in dependency tree for token: there
+Cycle detected in dependency tree for token: in
+Cycle detected in dependency tree for token: the
+Cycle detected in dependency tree for token: training
+Cycle detected in dependency tree for token: set
+Cycle detected in dependency tree for token: of
+Cycle detected in dependency tree for token: the
+Cycle detected in dependency tree for token: Linked
+Cycle detected in dependency tree for token: WikiText-2
+Cycle detected in dependency tree for token: Corpus
+Cycle detected in dependency tree for token: ?
+2025-11-20 19:56:47,376 - QALFPipeline - INFO - ✅ Complexity: ('Medium', 'Low', 'Low', 'Medium') | Intent: factual_lookup (took 0.012s)
+2025-11-20 19:56:47,376 - QALFPipeline - INFO -
+🔄 STEP 2: Adaptive Routing
+2025-11-20 19:56:47,376 - QALFPipeline - INFO - --------------------------------------------------------------------------------
+2025-11-20 19:56:47,376 - QALFPipeline - INFO - ✅ Active modalities: ['vector', 'keyword'] (took 0.000s)
+2025-11-20 19:56:47,376 - QALFPipeline - INFO -
+🔧 STEP 3: Query Representation Generation
+2025-11-20 19:56:47,376 - QALFPipeline - INFO - --------------------------------------------------------------------------------
+2025-11-20 19:56:47,787 - QALFPipeline - INFO - ✅ Generated embedding (dim=384) and extracted 1 entities (took 0.411s)
+2025-11-20 19:56:47,788 - QALFPipeline - INFO -    Entities: ['the Linked WikiText-2 Corpus']
+2025-11-20 19:56:47,788 - QALFPipeline - INFO -
+🔍 STEP 4: Multi-Modal Retrieval
+2025-11-20 19:56:47,788 - QALFPipeline - INFO - --------------------------------------------------------------------------------
+2025-11-20 19:56:47,788 - Neo4jMultiModalRetriever - INFO - 🔍 [VECTOR] Starting vector similarity search (top_k=10, embedding_dim=384)
+2025-11-20 19:56:47,788 - Neo4jManager - INFO - 🔍 Executing Neo4j query (preview):
+            CALL db.index.vector.queryNodes('text_chunk_vector_index', $top_k * 3, $query_embedding)
+            YIELD node AS chunk, score
+            MATCH (chunk)-[:IN_DOCUMENT]->(doc:Document)
+  ...
+2025-11-20 19:56:47,794 - Neo4jManager - INFO - ✅ Query completed in 0.007s - Returned 1 records
+2025-11-20 19:56:47,794 - Neo4jMultiModalRetriever - INFO - ✅ [VECTOR] Retrieved 1 documents in 0.007s
+2025-11-20 19:56:47,794 - QALFPipeline - INFO -    Vector: 1 results
+2025-11-20 19:56:47,794 - Neo4jMultiModalRetriever - INFO - 🔍 [KEYWORD] Starting full-text keyword search (top_k=10, query: 'How many documents are there in the training set of the Linked WikiText-2 Corpus?...')
+2025-11-20 19:56:47,794 - Neo4jManager - INFO - 🔍 Executing Neo4j query (preview):
+            CALL db.index.fulltext.queryNodes("chunk_fulltext", $query_string, {limit: $top_k * 3})
+            YIELD node AS chunk, score
+            MATCH (chunk)-[:IN_DOCUMENT]->(doc:Document)
+   ...
+2025-11-20 19:56:47,797 - Neo4jManager - ERROR - ❌ Query execution failed after 0.003s: {code: Neo.ClientError.Procedure.ProcedureCallFailed} {message: Failed to invoke procedure `db.index.fulltext.queryNodes`: Caused by: java.lang.IllegalArgumentException: There is no such fulltext schema index: chunk_fulltext}
+2025-11-20 19:56:47,797 - Neo4jMultiModalRetriever - ERROR - ❌ [KEYWORD] Keyword retrieval failed after 0.003s: {code: Neo.ClientError.Procedure.ProcedureCallFailed} {message: Failed to invoke procedure `db.index.fulltext.queryNodes`: Caused by: java.lang.IllegalArgumentException: There is no such fulltext schema index: chunk_fulltext}
+2025-11-20 19:56:47,797 - QALFPipeline - INFO -    Keyword: 0 results
+2025-11-20 19:56:47,797 - QALFPipeline - INFO - ✅ Retrieval complete: 1 total documents across 2 modalities (took 0.009s)    
+2025-11-20 19:56:47,797 - QALFPipeline - INFO -
+🤝 STEP 5: Consensus Score Computation
+2025-11-20 19:56:47,797 - QALFPipeline - INFO - --------------------------------------------------------------------------------
+2025-11-20 19:56:47,797 - QALFPipeline - INFO - ✅ Computed consensus scores for 1 documents (took 0.000s)
+2025-11-20 19:56:47,797 - QALFPipeline - INFO -
+⚖️  STEP 6: Adaptive Weight Computation
+2025-11-20 19:56:47,797 - QALFPipeline - INFO - --------------------------------------------------------------------------------
+2025-11-20 19:56:47,797 - QALFPipeline - INFO -    Base weights (α_intent): {'vector': 0.7, 'graph': 0.2, 'keyword': 0.1}     
+2025-11-20 19:56:47,797 - QALFPipeline - INFO - ✅ Adaptive weights computed (took 0.000s)
+2025-11-20 19:56:47,798 - QALFPipeline - INFO -    vector: 0.5250
+2025-11-20 19:56:47,798 - QALFPipeline - INFO -    keyword: 0.1000
+2025-11-20 19:56:47,798 - QALFPipeline - INFO -
+🔀 STEP 7: Consensus-Based Fusion
+2025-11-20 19:56:47,798 - QALFPipeline - INFO - --------------------------------------------------------------------------------
+2025-11-20 19:56:47,798 - QALFPipeline - INFO - ✅ Fusion complete: 1 documents ranked (took 0.000s)
+2025-11-20 19:56:47,798 - QALFPipeline - INFO -
+📝 STEP 8: Result Formatting
+2025-11-20 19:56:47,798 - QALFPipeline - INFO - --------------------------------------------------------------------------------
+2025-11-20 19:56:47,798 - QALFPipeline - INFO - ✅ Formatted 1 results (took 0.000s)
+2025-11-20 19:56:47,798 - QALFPipeline - INFO - ================================================================================
+2025-11-20 19:56:47,798 - QALFPipeline - INFO - 🎉 QALF PIPELINE COMPLETE - Total time: 0.434s
+2025-11-20 19:56:47,798 - QALFPipeline - INFO -    Returned 1 documents
+2025-11-20 19:56:47,798 - QALFPipeline - INFO - ================================================================================
+2025-11-20 19:56:47,798 - RAGGenerator - INFO - ================================================================================
+2025-11-20 19:56:47,798 - RAGGenerator - INFO - 🤖 RAG GENERATION START - Query: 'How many documents are there in the training set of the Linked WikiText-2 Corpus?'
+2025-11-20 19:56:47,798 - RAGGenerator - INFO - ================================================================================
+2025-11-20 19:56:47,798 - RAGGenerator - INFO -
+📚 STEP 1: Fetching Document Content
+2025-11-20 19:56:47,798 - RAGGenerator - INFO - --------------------------------------------------------------------------------
+2025-11-20 19:56:47,798 - RAGGenerator - INFO -    Retrieved 1 document IDs
+2025-11-20 19:56:47,798 - Neo4jManager - INFO - 🔍 Executing Neo4j query (preview):
+            MATCH (c:Chunk)-[:IN_DOCUMENT]->(doc:Document)
+            WHERE doc.id IN $doc_ids
+            WITH doc, c
+            ORDER BY doc.id, c.chunk_index ASC
+            WITH doc, collect(c)...
+2025-11-20 19:56:47,802 - Neo4jManager - INFO - ✅ Query completed in 0.005s - Returned 3 records
+2025-11-20 19:56:47,802 - RAGGenerator - INFO - ✅ Fetched 3 chunks from 1 documents (took 0.005s)
+2025-11-20 19:56:47,802 - RAGGenerator - INFO -
+📝 STEP 2: Building Context
+2025-11-20 19:56:47,804 - RAGGenerator - INFO - --------------------------------------------------------------------------------
+2025-11-20 19:56:47,804 - RAGGenerator - INFO - ✅ Context built: 1880 characters from 3 chunks (took 0.002s)
+2025-11-20 19:56:47,804 - RAGGenerator - INFO -
+💬 STEP 3: Generating Response
+2025-11-20 19:56:47,804 - RAGGenerator - INFO - --------------------------------------------------------------------------------
+2025-11-20 19:56:51,509 - RAGGenerator - INFO - ✅ Response generated (took 3.705s)
+2025-11-20 19:56:51,509 - RAGGenerator - INFO - ================================================================================
+2025-11-20 19:56:51,509 - RAGGenerator - INFO - 🎉 RAG GENERATION COMPLETE - Total time: 3.712s
+2025-11-20 19:56:51,509 - RAGGenerator - INFO -    Response length: 709 characters
+2025-11-20 19:56:51,509 - RAGGenerator - INFO -    Sources: 1 documents
+2025-11-20 19:56:51,509 - RAGGenerator - INFO - ================================================================================
+
+================================================================================
+=== QALF Adaptive Output ===
+================================================================================
+
+📊 Query Analysis:
+  Complexity (4D): ('Medium', 'Low', 'Low', 'Medium')
+  Intent: factual_lookup
+  Active Modalities: vector, keyword
+
+💬 Generated Response:
+--------------------------------------------------------------------------------
+Unfortunately, the provided context does not mention the number of documents in the training set of the Linked WikiText-2 Corpus.
+
+However, it is mentioned that the Linked WikiText-2 dataset is a corpus of annotated text aligned to the Wikidata knowledge graph whose contents (roughly) match the popular WikiText-2 benchmark [Source: data\raw\DocBench\0\P19-1598.pdf, Chunk 1]. This suggests that the Linked WikiText-2 Corpus may be related to or derived from the WikiText-2 dataset, which has a specific number of documents. However, this information is not explicitly stated in the provided context.
+
+Therefore, I must say that there is not enough information to provide an accurate answer to your question.
+--------------------------------------------------------------------------------
+
+📚 Sources (1 documents):
+  1. data\raw\DocBench\0\P19-1598.pdf (3 chunks)
+
+⏱️  Generation time: 3.71s
+--------------------------------------------------------------------------------
+
+📄 Top Results [1]:
+--------------------------------------------------------------------------------
+
+[1] data\raw\DocBench\0\P19-1598.pdf
+    Score: 0.0086 | Consensus: 0.50
+    Doc ID: data\raw\DocBench\0\P19-1598.pdf
+
+--------------------------------------------------------------------------------
+================================================================================
+
+--------------------------------------------------------------------------------
+Query> Which language model has the lowest Perplexity (PPL) according to Table 3?
+
+🔍 Processing: 'Which language model has the lowest Perplexity (PPL) according to Table 3?'
+2025-11-20 19:56:54,508 - QALFPipeline - INFO - ================================================================================
+2025-11-20 19:56:54,508 - QALFPipeline - INFO - 🚀 QALF PIPELINE START - Query: 'Which language model has the lowest Perplexity (PPL) according to Table 3?'
+2025-11-20 19:56:54,508 - QALFPipeline - INFO - ================================================================================
+2025-11-20 19:56:54,509 - QALFPipeline - INFO - 📋 Configuration: top_k=7, retrieval_top_k=10
+2025-11-20 19:56:54,509 - QALFPipeline - INFO -
+📊 STEP 1: Query Analysis
+2025-11-20 19:56:54,509 - QALFPipeline - INFO - --------------------------------------------------------------------------------
+Cycle detected in dependency tree for token: Which
+Cycle detected in dependency tree for token: language
+Cycle detected in dependency tree for token: model
+Cycle detected in dependency tree for token: the
+Cycle detected in dependency tree for token: lowest
+Cycle detected in dependency tree for token: Perplexity
+Cycle detected in dependency tree for token: (
+Cycle detected in dependency tree for token: PPL
+Cycle detected in dependency tree for token: )
+Cycle detected in dependency tree for token: according
+Cycle detected in dependency tree for token: to
+Cycle detected in dependency tree for token: Table
+Cycle detected in dependency tree for token: 3
+Cycle detected in dependency tree for token: ?
+2025-11-20 19:56:54,520 - QALFPipeline - INFO - ✅ Complexity: ('Medium', 'Low', 'Medium', 'Medium') | Intent: visual_tabular (took 0.011s)
+2025-11-20 19:56:54,520 - QALFPipeline - INFO -
+🔄 STEP 2: Adaptive Routing
+2025-11-20 19:56:54,520 - QALFPipeline - INFO - --------------------------------------------------------------------------------
+2025-11-20 19:56:54,521 - QALFPipeline - INFO - ✅ Active modalities: ['vector', 'keyword'] (took 0.001s)
+2025-11-20 19:56:54,521 - QALFPipeline - INFO -
+🔧 STEP 3: Query Representation Generation
+2025-11-20 19:56:54,521 - QALFPipeline - INFO - --------------------------------------------------------------------------------
+2025-11-20 19:56:54,756 - QALFPipeline - INFO - ✅ Generated embedding (dim=384) and extracted 1 entities (took 0.235s)
+2025-11-20 19:56:54,756 - QALFPipeline - INFO -    Entities: ['Table 3']
+2025-11-20 19:56:54,757 - QALFPipeline - INFO -
+🔍 STEP 4: Multi-Modal Retrieval
+2025-11-20 19:56:54,757 - QALFPipeline - INFO - --------------------------------------------------------------------------------
+2025-11-20 19:56:54,757 - Neo4jMultiModalRetriever - INFO - 🔍 [VECTOR] Starting vector similarity search (top_k=10, embedding_dim=384)
+2025-11-20 19:56:54,757 - Neo4jManager - INFO - 🔍 Executing Neo4j query (preview):
+            CALL db.index.vector.queryNodes('text_chunk_vector_index', $top_k * 3, $query_embedding)
+            YIELD node AS chunk, score
+            MATCH (chunk)-[:IN_DOCUMENT]->(doc:Document)
+  ...
+2025-11-20 19:56:54,764 - Neo4jManager - INFO - ✅ Query completed in 0.007s - Returned 1 records
+2025-11-20 19:56:54,764 - Neo4jMultiModalRetriever - INFO - ✅ [VECTOR] Retrieved 1 documents in 0.007s
+2025-11-20 19:56:54,764 - QALFPipeline - INFO -    Vector: 1 results
+2025-11-20 19:56:54,764 - Neo4jMultiModalRetriever - INFO - 🔍 [KEYWORD] Starting full-text keyword search (top_k=10, query: 'Which language model has the lowest Perplexity (PPL) according to Table 3?...')
+2025-11-20 19:56:54,764 - Neo4jManager - INFO - 🔍 Executing Neo4j query (preview):
+            CALL db.index.fulltext.queryNodes("chunk_fulltext", $query_string, {limit: $top_k * 3})
+            YIELD node AS chunk, score
+            MATCH (chunk)-[:IN_DOCUMENT]->(doc:Document)
+   ...
+2025-11-20 19:56:54,767 - Neo4jManager - ERROR - ❌ Query execution failed after 0.003s: {code: Neo.ClientError.Procedure.ProcedureCallFailed} {message: Failed to invoke procedure `db.index.fulltext.queryNodes`: Caused by: java.lang.IllegalArgumentException: There is no such fulltext schema index: chunk_fulltext}
+2025-11-20 19:56:54,767 - Neo4jMultiModalRetriever - ERROR - ❌ [KEYWORD] Keyword retrieval failed after 0.003s: {code: Neo.ClientError.Procedure.ProcedureCallFailed} {message: Failed to invoke procedure `db.index.fulltext.queryNodes`: Caused by: java.lang.IllegalArgumentException: There is no such fulltext schema index: chunk_fulltext}
+2025-11-20 19:56:54,767 - QALFPipeline - INFO -    Keyword: 0 results
+2025-11-20 19:56:54,768 - QALFPipeline - INFO - ✅ Retrieval complete: 1 total documents across 2 modalities (took 0.011s)    
+2025-11-20 19:56:54,768 - QALFPipeline - INFO -
+🤝 STEP 5: Consensus Score Computation
+2025-11-20 19:56:54,768 - QALFPipeline - INFO - --------------------------------------------------------------------------------
+2025-11-20 19:56:54,768 - QALFPipeline - INFO - ✅ Computed consensus scores for 1 documents (took 0.000s)
+2025-11-20 19:56:54,768 - QALFPipeline - INFO -
+⚖️  STEP 6: Adaptive Weight Computation
+2025-11-20 19:56:54,768 - QALFPipeline - INFO - --------------------------------------------------------------------------------
+2025-11-20 19:56:54,768 - QALFPipeline - INFO -    Base weights (α_intent): {'vector': 0.3, 'graph': 0.2, 'keyword': 0.5}     
+2025-11-20 19:56:54,768 - QALFPipeline - INFO - ✅ Adaptive weights computed (took 0.000s)
+2025-11-20 19:56:54,768 - QALFPipeline - INFO -    vector: 0.2250
+2025-11-20 19:56:54,769 - QALFPipeline - INFO -    keyword: 0.5000
+2025-11-20 19:56:54,769 - QALFPipeline - INFO -
+🔀 STEP 7: Consensus-Based Fusion
+2025-11-20 19:56:54,769 - QALFPipeline - INFO - --------------------------------------------------------------------------------
+2025-11-20 19:56:54,769 - QALFPipeline - INFO - ✅ Fusion complete: 1 documents ranked (took 0.000s)
+2025-11-20 19:56:54,769 - QALFPipeline - INFO -
+📝 STEP 8: Result Formatting
+2025-11-20 19:56:54,769 - QALFPipeline - INFO - --------------------------------------------------------------------------------
+2025-11-20 19:56:54,769 - QALFPipeline - INFO - ✅ Formatted 1 results (took 0.000s)
+2025-11-20 19:56:54,769 - QALFPipeline - INFO - ================================================================================
+2025-11-20 19:56:54,769 - QALFPipeline - INFO - 🎉 QALF PIPELINE COMPLETE - Total time: 0.261s
+2025-11-20 19:56:54,769 - QALFPipeline - INFO -    Returned 1 documents
+2025-11-20 19:56:54,769 - QALFPipeline - INFO - ================================================================================
+2025-11-20 19:56:54,769 - RAGGenerator - INFO - ================================================================================
+2025-11-20 19:56:54,769 - RAGGenerator - INFO - 🤖 RAG GENERATION START - Query: 'Which language model has the lowest Perplexity (PPL) according to Table 3?'
+2025-11-20 19:56:54,770 - RAGGenerator - INFO - ================================================================================
+2025-11-20 19:56:54,770 - RAGGenerator - INFO -
+📚 STEP 1: Fetching Document Content
+2025-11-20 19:56:54,770 - RAGGenerator - INFO - --------------------------------------------------------------------------------
+2025-11-20 19:56:54,770 - RAGGenerator - INFO -    Retrieved 1 document IDs
+2025-11-20 19:56:54,770 - Neo4jManager - INFO - 🔍 Executing Neo4j query (preview):
+            MATCH (c:Chunk)-[:IN_DOCUMENT]->(doc:Document)
+            WHERE doc.id IN $doc_ids
+            WITH doc, c
+            ORDER BY doc.id, c.chunk_index ASC
+            WITH doc, collect(c)...
+2025-11-20 19:56:54,773 - Neo4jManager - INFO - ✅ Query completed in 0.003s - Returned 3 records
+2025-11-20 19:56:54,773 - RAGGenerator - INFO - ✅ Fetched 3 chunks from 1 documents (took 0.003s)
+2025-11-20 19:56:54,773 - RAGGenerator - INFO -
+📝 STEP 2: Building Context
+2025-11-20 19:56:54,773 - RAGGenerator - INFO - --------------------------------------------------------------------------------
+2025-11-20 19:56:54,773 - RAGGenerator - INFO - ✅ Context built: 1880 characters from 3 chunks (took 0.000s)
+2025-11-20 19:56:54,773 - RAGGenerator - INFO -
+💬 STEP 3: Generating Response
+2025-11-20 19:56:54,773 - RAGGenerator - INFO - --------------------------------------------------------------------------------
+2025-11-20 19:56:56,375 - RAGGenerator - INFO - ✅ Response generated (took 1.602s)
+2025-11-20 19:56:56,375 - RAGGenerator - INFO - ================================================================================
+2025-11-20 19:56:56,375 - RAGGenerator - INFO - 🎉 RAG GENERATION COMPLETE - Total time: 1.606s
+2025-11-20 19:56:56,375 - RAGGenerator - INFO -    Response length: 752 characters
+2025-11-20 19:56:56,375 - RAGGenerator - INFO -    Sources: 1 documents
+2025-11-20 19:56:56,375 - RAGGenerator - INFO - ================================================================================
+
+================================================================================
+=== QALF Adaptive Output ===
+================================================================================
+
+📊 Query Analysis:
+  Complexity (4D): ('Medium', 'Low', 'Medium', 'Medium')
+  Intent: visual_tabular
+  Active Modalities: vector, keyword
+
+💬 Generated Response:
+--------------------------------------------------------------------------------
+Unfortunately, I don't see any mention of Table 3 or Perplexity (PPL) in the provided context. The text only mentions experiments and results but does not specify which language model has the lowest PPL.
+
+However, it is mentioned that "we demonstrate that the KGLM achieves significantly better performance than a strong baseline language model" [Source: data\raw\DocBench\0\P19-1598.pdf, Chunk 1]. This implies that the KGLM (Knowledge Graph Language Model) performs well in some metrics, but I cannot determine which specific metric is being referred to or if it includes PPL.     
+
+If you could provide more context or clarify which table or section of the document contains information about Perplexity (PPL), I would be happy to try and assist further.
+--------------------------------------------------------------------------------
+
+📚 Sources (1 documents):
+  1. data\raw\DocBench\0\P19-1598.pdf (3 chunks)
+
+⏱️  Generation time: 1.61s
+--------------------------------------------------------------------------------
+
+📄 Top Results [1]:
+--------------------------------------------------------------------------------
+
+[1] data\raw\DocBench\0\P19-1598.pdf
+    Score: 0.0037 | Consensus: 0.50
+    Doc ID: data\raw\DocBench\0\P19-1598.pdf
+
+--------------------------------------------------------------------------------
+================================================================================
+
+--------------------------------------------------------------------------------
+Query> Who is the last author of the paper?
+
+🔍 Processing: 'Who is the last author of the paper?'
+2025-11-20 19:57:27,300 - QALFPipeline - INFO - ================================================================================
+2025-11-20 19:57:27,300 - QALFPipeline - INFO - 🚀 QALF PIPELINE START - Query: 'Who is the last author of the paper?'        
+2025-11-20 19:57:27,300 - QALFPipeline - INFO - ================================================================================
+2025-11-20 19:57:27,300 - QALFPipeline - INFO - 📋 Configuration: top_k=7, retrieval_top_k=10
+2025-11-20 19:57:27,300 - QALFPipeline - INFO -
+📊 STEP 1: Query Analysis
+2025-11-20 19:57:27,300 - QALFPipeline - INFO - --------------------------------------------------------------------------------
+Cycle detected in dependency tree for token: Who
+Cycle detected in dependency tree for token: the
+Cycle detected in dependency tree for token: last
+Cycle detected in dependency tree for token: author
+Cycle detected in dependency tree for token: of
+Cycle detected in dependency tree for token: the
+Cycle detected in dependency tree for token: paper
+Cycle detected in dependency tree for token: ?
+2025-11-20 19:57:27,310 - QALFPipeline - INFO - ✅ Complexity: ('Low', 'Low', 'Low', 'Low') | Intent: relationship (took 0.010s)
+2025-11-20 19:57:27,310 - QALFPipeline - INFO -
+🔄 STEP 2: Adaptive Routing
+2025-11-20 19:57:27,310 - QALFPipeline - INFO - --------------------------------------------------------------------------------
+2025-11-20 19:57:27,310 - QALFPipeline - INFO - ✅ Active modalities: ['vector', 'graph', 'keyword'] (took 0.000s)
+2025-11-20 19:57:27,310 - QALFPipeline - INFO -
+🔧 STEP 3: Query Representation Generation
+2025-11-20 19:57:27,310 - QALFPipeline - INFO - --------------------------------------------------------------------------------
+2025-11-20 19:57:27,538 - QALFPipeline - INFO - ✅ Generated embedding (dim=384) and extracted 0 entities (took 0.228s)
+2025-11-20 19:57:27,538 - QALFPipeline - INFO - 
+🔍 STEP 4: Multi-Modal Retrieval
+2025-11-20 19:57:27,538 - QALFPipeline - INFO - --------------------------------------------------------------------------------
+2025-11-20 19:57:27,538 - Neo4jMultiModalRetriever - INFO - 🔍 [VECTOR] Starting vector similarity search (top_k=10, embedding_dim=384)
+2025-11-20 19:57:27,539 - Neo4jManager - INFO - 🔍 Executing Neo4j query (preview):
+            CALL db.index.vector.queryNodes('text_chunk_vector_index', $top_k * 3, $query_embedding)
+            YIELD node AS chunk, score
+            MATCH (chunk)-[:IN_DOCUMENT]->(doc:Document)
+  ...
+2025-11-20 19:57:27,545 - Neo4jManager - INFO - ✅ Query completed in 0.006s - Returned 1 records
+2025-11-20 19:57:27,545 - Neo4jMultiModalRetriever - INFO - ✅ [VECTOR] Retrieved 1 documents in 0.007s
+2025-11-20 19:57:27,545 - QALFPipeline - INFO -    Vector: 1 results
+2025-11-20 19:57:27,545 - Neo4jMultiModalRetriever - INFO - 🔍 [KEYWORD] Starting full-text keyword search (top_k=10, query: 'Who is the last author of the paper?...')
+2025-11-20 19:57:27,546 - Neo4jManager - INFO - 🔍 Executing Neo4j query (preview):
+            CALL db.index.fulltext.queryNodes("chunk_fulltext", $query_string, {limit: $top_k * 3})
+            YIELD node AS chunk, score
+            MATCH (chunk)-[:IN_DOCUMENT]->(doc:Document)
+   ...
+2025-11-20 19:57:27,547 - Neo4jManager - ERROR - ❌ Query execution failed after 0.002s: {code: Neo.ClientError.Procedure.ProcedureCallFailed} {message: Failed to invoke procedure `db.index.fulltext.queryNodes`: Caused by: java.lang.IllegalArgumentException: There is no such fulltext schema index: chunk_fulltext}
+2025-11-20 19:57:27,547 - Neo4jMultiModalRetriever - ERROR - ❌ [KEYWORD] Keyword retrieval failed after 0.003s: {code: Neo.ClientError.Procedure.ProcedureCallFailed} {message: Failed to invoke procedure `db.index.fulltext.queryNodes`: Caused by: java.lang.IllegalArgumentException: There is no such fulltext schema index: chunk_fulltext}
+2025-11-20 19:57:27,547 - QALFPipeline - INFO -    Keyword: 0 results
+2025-11-20 19:57:27,547 - Neo4jMultiModalRetriever - INFO - 🔍 [GRAPH] No entities extracted, skipping graph retrieval        
+2025-11-20 19:57:27,548 - QALFPipeline - INFO -    Graph: 0 results
+2025-11-20 19:57:27,548 - QALFPipeline - INFO - ✅ Retrieval complete: 1 total documents across 3 modalities (took 0.011s)    
+2025-11-20 19:57:27,548 - QALFPipeline - INFO -
+🤝 STEP 5: Consensus Score Computation
+2025-11-20 19:57:27,548 - QALFPipeline - INFO - --------------------------------------------------------------------------------
+2025-11-20 19:57:27,548 - QALFPipeline - INFO - ✅ Computed consensus scores for 1 documents (took 0.000s)
+2025-11-20 19:57:27,548 - QALFPipeline - INFO -
+⚖️  STEP 6: Adaptive Weight Computation
+2025-11-20 19:57:27,548 - QALFPipeline - INFO - --------------------------------------------------------------------------------
+2025-11-20 19:57:27,548 - QALFPipeline - INFO -    Base weights (α_intent): {'vector': 0.3, 'graph': 0.6, 'keyword': 0.1}     
+2025-11-20 19:57:27,548 - QALFPipeline - INFO - ✅ Adaptive weights computed (took 0.000s)
+2025-11-20 19:57:27,548 - QALFPipeline - INFO -    vector: 0.2000
+2025-11-20 19:57:27,548 - QALFPipeline - INFO -    keyword: 0.1000
+2025-11-20 19:57:27,548 - QALFPipeline - INFO -    graph: 0.6000
+2025-11-20 19:57:27,548 - QALFPipeline - INFO -
+🔀 STEP 7: Consensus-Based Fusion
+2025-11-20 19:57:27,548 - QALFPipeline - INFO - --------------------------------------------------------------------------------
+2025-11-20 19:57:27,549 - QALFPipeline - INFO - ✅ Fusion complete: 1 documents ranked (took 0.001s)
+2025-11-20 19:57:27,549 - QALFPipeline - INFO -
+📝 STEP 8: Result Formatting
+2025-11-20 19:57:27,549 - QALFPipeline - INFO - --------------------------------------------------------------------------------
+2025-11-20 19:57:27,549 - QALFPipeline - INFO - ✅ Formatted 1 results (took 0.000s)
+2025-11-20 19:57:27,549 - QALFPipeline - INFO - ================================================================================
+2025-11-20 19:57:27,549 - QALFPipeline - INFO - 🎉 QALF PIPELINE COMPLETE - Total time: 0.249s
+2025-11-20 19:57:27,549 - QALFPipeline - INFO -    Returned 1 documents
+2025-11-20 19:57:27,549 - QALFPipeline - INFO - ================================================================================
+2025-11-20 19:57:27,549 - RAGGenerator - INFO - ================================================================================
+2025-11-20 19:57:27,549 - RAGGenerator - INFO - 🤖 RAG GENERATION START - Query: 'Who is the last author of the paper?'       
+2025-11-20 19:57:27,549 - RAGGenerator - INFO - ================================================================================
+2025-11-20 19:57:27,549 - RAGGenerator - INFO -
+📚 STEP 1: Fetching Document Content
+2025-11-20 19:57:27,549 - RAGGenerator - INFO - --------------------------------------------------------------------------------
+2025-11-20 19:57:27,550 - RAGGenerator - INFO -    Retrieved 1 document IDs
+2025-11-20 19:57:27,550 - Neo4jManager - INFO - 🔍 Executing Neo4j query (preview):
+            MATCH (c:Chunk)-[:IN_DOCUMENT]->(doc:Document)
+            WHERE doc.id IN $doc_ids
+            WITH doc, c
+            ORDER BY doc.id, c.chunk_index ASC
+            WITH doc, collect(c)...
+2025-11-20 19:57:27,554 - Neo4jManager - INFO - ✅ Query completed in 0.004s - Returned 3 records
+2025-11-20 19:57:27,554 - RAGGenerator - INFO - ✅ Fetched 3 chunks from 1 documents (took 0.005s)
+2025-11-20 19:57:27,554 - RAGGenerator - INFO -
+📝 STEP 2: Building Context
+2025-11-20 19:57:27,554 - RAGGenerator - INFO - --------------------------------------------------------------------------------
+2025-11-20 19:57:27,554 - RAGGenerator - INFO - ✅ Context built: 1880 characters from 3 chunks (took 0.000s)
+2025-11-20 19:57:27,554 - RAGGenerator - INFO -
+💬 STEP 3: Generating Response
+2025-11-20 19:57:27,554 - RAGGenerator - INFO - --------------------------------------------------------------------------------
+2025-11-20 19:57:30,381 - RAGGenerator - INFO - ✅ Response generated (took 2.828s)
+2025-11-20 19:57:30,382 - RAGGenerator - INFO - ================================================================================
+2025-11-20 19:57:30,382 - RAGGenerator - INFO - 🎉 RAG GENERATION COMPLETE - Total time: 2.833s
+2025-11-20 19:57:30,382 - RAGGenerator - INFO -    Response length: 228 characters
+2025-11-20 19:57:30,382 - RAGGenerator - INFO -    Sources: 1 documents
+2025-11-20 19:57:30,382 - RAGGenerator - INFO - ================================================================================
+
+================================================================================
+=== QALF Adaptive Output ===
+================================================================================
+
+📊 Query Analysis:
+  Complexity (4D): ('Low', 'Low', 'Low', 'Low')
+  Intent: relationship
+  Active Modalities: vector, graph, keyword
+
+💬 Generated Response:
+--------------------------------------------------------------------------------
+According to the provided context, the authors of the paper are:
+
+* Robert L. Logan IV
+* Nelson F. Liu
+* Matt Gardner
+* Sameer Singh
+
+The last author mentioned is Sameer Singh [Source: data\raw\DocBench\0\P19-1598.pdf, Chunk 0].
+--------------------------------------------------------------------------------
+
+📚 Sources (1 documents):
+  1. data\raw\DocBench\0\P19-1598.pdf (3 chunks)
+
+⏱️  Generation time: 2.83s
+--------------------------------------------------------------------------------
+
+📄 Top Results [1]:
+--------------------------------------------------------------------------------
+
+[1] data\raw\DocBench\0\P19-1598.pdf
+    Score: 0.0033 | Consensus: 0.33
+    Doc ID: data\raw\DocBench\0\P19-1598.pdf
+
+--------------------------------------------------------------------------------
+================================================================================
+
+--------------------------------------------------------------------------------
+Query> On which page does the paper introduce the corpus statistics?
+
+🔍 Processing: 'On which page does the paper introduce the corpus statistics?'
+2025-11-20 19:57:38,907 - QALFPipeline - INFO - ================================================================================
+2025-11-20 19:57:38,907 - QALFPipeline - INFO - 🚀 QALF PIPELINE START - Query: 'On which page does the paper introduce the corpus statistics?'
+2025-11-20 19:57:38,907 - QALFPipeline - INFO - ================================================================================
+2025-11-20 19:57:38,907 - QALFPipeline - INFO - 📋 Configuration: top_k=7, retrieval_top_k=10
+2025-11-20 19:57:38,907 - QALFPipeline - INFO -
+📊 STEP 1: Query Analysis
+2025-11-20 19:57:38,907 - QALFPipeline - INFO - --------------------------------------------------------------------------------
+Cycle detected in dependency tree for token: On
+Cycle detected in dependency tree for token: which
+Cycle detected in dependency tree for token: page
+Cycle detected in dependency tree for token: does
+Cycle detected in dependency tree for token: the
+Cycle detected in dependency tree for token: paper
+Cycle detected in dependency tree for token: the
+Cycle detected in dependency tree for token: corpus
+Cycle detected in dependency tree for token: statistics
+Cycle detected in dependency tree for token: ?
+2025-11-20 19:57:38,918 - QALFPipeline - INFO - ✅ Complexity: ('Medium', 'Low', 'Low', 'Low') | Intent: factual_lookup (took 0.010s)
+2025-11-20 19:57:38,918 - QALFPipeline - INFO -
+🔄 STEP 2: Adaptive Routing
+2025-11-20 19:57:38,918 - QALFPipeline - INFO - --------------------------------------------------------------------------------
+2025-11-20 19:57:38,918 - QALFPipeline - INFO - ✅ Active modalities: ['vector', 'keyword'] (took 0.000s)
+2025-11-20 19:57:38,918 - QALFPipeline - INFO -
+🔧 STEP 3: Query Representation Generation
+2025-11-20 19:57:38,919 - QALFPipeline - INFO - --------------------------------------------------------------------------------
+2025-11-20 19:57:39,154 - QALFPipeline - INFO - ✅ Generated embedding (dim=384) and extracted 1 entities (took 0.237s)
+2025-11-20 19:57:39,154 - QALFPipeline - INFO -    Entities: ['On']
+2025-11-20 19:57:39,154 - QALFPipeline - INFO -
+🔍 STEP 4: Multi-Modal Retrieval
+2025-11-20 19:57:39,154 - QALFPipeline - INFO - --------------------------------------------------------------------------------
+2025-11-20 19:57:39,154 - Neo4jMultiModalRetriever - INFO - 🔍 [VECTOR] Starting vector similarity search (top_k=10, embedding_dim=384)
+2025-11-20 19:57:39,155 - Neo4jManager - INFO - 🔍 Executing Neo4j query (preview):
+            CALL db.index.vector.queryNodes('text_chunk_vector_index', $top_k * 3, $query_embedding)
+            YIELD node AS chunk, score
+            MATCH (chunk)-[:IN_DOCUMENT]->(doc:Document)
+  ...
+2025-11-20 19:57:39,161 - Neo4jManager - INFO - ✅ Query completed in 0.006s - Returned 1 records
+2025-11-20 19:57:39,161 - Neo4jMultiModalRetriever - INFO - ✅ [VECTOR] Retrieved 1 documents in 0.007s
+2025-11-20 19:57:39,161 - QALFPipeline - INFO -    Vector: 1 results
+2025-11-20 19:57:39,161 - Neo4jMultiModalRetriever - INFO - 🔍 [KEYWORD] Starting full-text keyword search (top_k=10, query: 'On which page does the paper introduce the corpus statistics?...')
+2025-11-20 19:57:39,161 - Neo4jManager - INFO - 🔍 Executing Neo4j query (preview):
+            CALL db.index.fulltext.queryNodes("chunk_fulltext", $query_string, {limit: $top_k * 3})
+            YIELD node AS chunk, score
+            MATCH (chunk)-[:IN_DOCUMENT]->(doc:Document)
+   ...
+2025-11-20 19:57:39,164 - Neo4jManager - ERROR - ❌ Query execution failed after 0.003s: {code: Neo.ClientError.Procedure.ProcedureCallFailed} {message: Failed to invoke procedure `db.index.fulltext.queryNodes`: Caused by: java.lang.IllegalArgumentException: There is no such fulltext schema index: chunk_fulltext}
+2025-11-20 19:57:39,164 - Neo4jMultiModalRetriever - ERROR - ❌ [KEYWORD] Keyword retrieval failed after 0.003s: {code: Neo.ClientError.Procedure.ProcedureCallFailed} {message: Failed to invoke procedure `db.index.fulltext.queryNodes`: Caused by: java.lang.IllegalArgumentException: There is no such fulltext schema index: chunk_fulltext}
+2025-11-20 19:57:39,164 - QALFPipeline - INFO -    Keyword: 0 results
+2025-11-20 19:57:39,165 - QALFPipeline - INFO - ✅ Retrieval complete: 1 total documents across 2 modalities (took 0.011s)    
+2025-11-20 19:57:39,165 - QALFPipeline - INFO -
+🤝 STEP 5: Consensus Score Computation
+2025-11-20 19:57:39,165 - QALFPipeline - INFO - --------------------------------------------------------------------------------
+2025-11-20 19:57:39,165 - QALFPipeline - INFO - ✅ Computed consensus scores for 1 documents (took 0.000s)
+2025-11-20 19:57:39,165 - QALFPipeline - INFO -
+⚖️  STEP 6: Adaptive Weight Computation
+2025-11-20 19:57:39,165 - QALFPipeline - INFO - --------------------------------------------------------------------------------
+2025-11-20 19:57:39,165 - QALFPipeline - INFO -    Base weights (α_intent): {'vector': 0.7, 'graph': 0.2, 'keyword': 0.1}     
+2025-11-20 19:57:39,165 - QALFPipeline - INFO - ✅ Adaptive weights computed (took 0.000s)
+2025-11-20 19:57:39,165 - QALFPipeline - INFO -    vector: 0.5250
+2025-11-20 19:57:39,165 - QALFPipeline - INFO -    keyword: 0.1000
+2025-11-20 19:57:39,165 - QALFPipeline - INFO -
+🔀 STEP 7: Consensus-Based Fusion
+2025-11-20 19:57:39,165 - QALFPipeline - INFO - --------------------------------------------------------------------------------
+2025-11-20 19:57:39,165 - QALFPipeline - INFO - ✅ Fusion complete: 1 documents ranked (took 0.000s)
+2025-11-20 19:57:39,166 - QALFPipeline - INFO -
+📝 STEP 8: Result Formatting
+2025-11-20 19:57:39,166 - QALFPipeline - INFO - --------------------------------------------------------------------------------
+2025-11-20 19:57:39,166 - QALFPipeline - INFO - ✅ Formatted 1 results (took 0.000s)
+2025-11-20 19:57:39,166 - QALFPipeline - INFO - ================================================================================
+2025-11-20 19:57:39,166 - QALFPipeline - INFO - 🎉 QALF PIPELINE COMPLETE - Total time: 0.259s
+2025-11-20 19:57:39,166 - QALFPipeline - INFO -    Returned 1 documents
+2025-11-20 19:57:39,166 - QALFPipeline - INFO - ================================================================================
+2025-11-20 19:57:39,166 - RAGGenerator - INFO - ================================================================================
+2025-11-20 19:57:39,166 - RAGGenerator - INFO - 🤖 RAG GENERATION START - Query: 'On which page does the paper introduce the corpus statistics?'
+2025-11-20 19:57:39,166 - RAGGenerator - INFO - ================================================================================
+2025-11-20 19:57:39,166 - RAGGenerator - INFO -
+📚 STEP 1: Fetching Document Content
+2025-11-20 19:57:39,166 - RAGGenerator - INFO - --------------------------------------------------------------------------------
+2025-11-20 19:57:39,166 - RAGGenerator - INFO -    Retrieved 1 document IDs
+2025-11-20 19:57:39,166 - Neo4jManager - INFO - 🔍 Executing Neo4j query (preview):
+            MATCH (c:Chunk)-[:IN_DOCUMENT]->(doc:Document)
+            WHERE doc.id IN $doc_ids
+            WITH doc, c
+            ORDER BY doc.id, c.chunk_index ASC
+            WITH doc, collect(c)...
+2025-11-20 19:57:39,169 - Neo4jManager - INFO - ✅ Query completed in 0.004s - Returned 3 records
+2025-11-20 19:57:39,169 - RAGGenerator - INFO - ✅ Fetched 3 chunks from 1 documents (took 0.004s)
+2025-11-20 19:57:39,169 - RAGGenerator - INFO -
+📝 STEP 2: Building Context
+2025-11-20 19:57:39,169 - RAGGenerator - INFO - --------------------------------------------------------------------------------
+2025-11-20 19:57:39,169 - RAGGenerator - INFO - ✅ Context built: 1880 characters from 3 chunks (took 0.000s)
+2025-11-20 19:57:39,169 - RAGGenerator - INFO -
+💬 STEP 3: Generating Response
+2025-11-20 19:57:39,169 - RAGGenerator - INFO - --------------------------------------------------------------------------------
+2025-11-20 19:57:42,478 - RAGGenerator - INFO - ✅ Response generated (took 3.308s)
+2025-11-20 19:57:42,478 - RAGGenerator - INFO - ================================================================================
+2025-11-20 19:57:42,478 - RAGGenerator - INFO - 🎉 RAG GENERATION COMPLETE - Total time: 3.312s
+2025-11-20 19:57:42,478 - RAGGenerator - INFO -    Response length: 577 characters
+2025-11-20 19:57:42,478 - RAGGenerator - INFO -    Sources: 1 documents
+2025-11-20 19:57:42,478 - RAGGenerator - INFO - ================================================================================
+
+================================================================================
+=== QALF Adaptive Output ===
+================================================================================
+
+📊 Query Analysis:
+  Complexity (4D): ('Medium', 'Low', 'Low', 'Low')
+  Intent: factual_lookup
+  Active Modalities: vector, keyword
+
+💬 Generated Response:
+--------------------------------------------------------------------------------
+Unfortunately, I must inform you that the provided context does not mention the introduction of corpus statistics or any specific page numbers related to it.
+
+The abstract and chunks provided discuss the introduction of the knowledge graph language model (KGLM), its mechanisms for selecting and copying facts from a knowledge graph, and its performance compared to a strong baseline language model. However, there is no information about corpus statistics being introduced on a specific page.
+
+If you'd like, I can help with any other question related to the provided context!
+--------------------------------------------------------------------------------
+
+📚 Sources (1 documents):
+  1. data\raw\DocBench\0\P19-1598.pdf (3 chunks)
+
+⏱️  Generation time: 3.31s
+--------------------------------------------------------------------------------
+
+📄 Top Results [1]:
+--------------------------------------------------------------------------------
+
+[1] data\raw\DocBench\0\P19-1598.pdf
+    Score: 0.0086 | Consensus: 0.50
+    Doc ID: data\raw\DocBench\0\P19-1598.pdf
+
+--------------------------------------------------------------------------------
+================================================================================
+
+--------------------------------------------------------------------------------
+Query>
+
+⚠️  Pipeline interrupted by user

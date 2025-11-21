@@ -369,9 +369,9 @@ class GraphDBManager(Neo4jManager):
 
             # Extract entities from table content using LLM
             if content:
-                # Create a text summary/description of the table for better extraction
-                # Limit to avoid token overflow
-                table_description = f"Table content: {content[:500]}"
+                # Use full table content for better extraction (but limit to reasonable size for LLM)
+                # Store full content in node, use full content for entity extraction
+                table_description = f"Table content: {content[:2000]}"  # Increased from 500 to 2000
 
                 doc = Document(
                     page_content=table_description,
@@ -416,14 +416,16 @@ class GraphDBManager(Neo4jManager):
         content: str,
         modality: str,
         doc_id: str,
-        chunk_index: int
+        chunk_index: int,
+        page: Optional[int] = None
     ):
         """Create a Chunk node and link to Document"""
         query = """
         MERGE (c:Chunk {id: $chunk_id})
         SET c.content = $content,
             c.modality = $modality,
-            c.chunk_index = $chunk_index
+            c.chunk_index = $chunk_index,
+            c.page = COALESCE($page, 1)
         WITH c
         MATCH (d:Document {id: $doc_id})
         MERGE (c)-[:IN_DOCUMENT]->(d)
@@ -437,6 +439,7 @@ class GraphDBManager(Neo4jManager):
                 content=content,
                 modality=modality,
                 chunk_index=chunk_index,
+                page=page,
                 doc_id=doc_id
             )
 

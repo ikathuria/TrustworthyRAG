@@ -136,7 +136,8 @@ class Neo4jMultiModalRetriever:
     ) -> List[Dict[str, Any]]:
         """
         Vector similarity search via Neo4j HNSW index.
-        Searches Chunk nodes (which have embeddings) and aggregates by Document.
+        Searches Chunk and Table nodes (which have embeddings) and aggregates by Document.
+        Now includes multimodal search (text chunks + tables).
         
         Args:
             query_embedding: Query embedding vector
@@ -146,11 +147,12 @@ class Neo4jMultiModalRetriever:
             List of documents with doc_id, title, and score
         """
         start_time = time.time()
-        self._logger.info(f"🔍 [VECTOR] Starting vector similarity search (top_k={top_k}, embedding_dim={len(query_embedding)})")
+        self._logger.info(f"🔍 [VECTOR] Starting multimodal vector similarity search (top_k={top_k}, embedding_dim={len(query_embedding)})")
         try:
-            # Search Chunk nodes (which have embeddings) and aggregate to Documents
-            # Use text_chunk_vector_index which is created during ingestion
-            cypher_query = """
+            # Search both Chunk nodes (text) and Table nodes (tables) with embeddings
+            # Use separate queries and combine in Python (more reliable than UNION ALL)
+            # First, search text chunks
+            chunk_query = """
             CALL db.index.vector.queryNodes('text_chunk_vector_index', $top_k * 3, $query_embedding)
             YIELD node AS chunk, score
             MATCH (chunk)-[:IN_DOCUMENT]->(doc:Document)
@@ -159,10 +161,82 @@ class Neo4jMultiModalRetriever:
                    COALESCE(doc.source_file, doc.id) AS title,
                    max_score AS score,
                    avg_score,
-                   chunk_count
-            ORDER BY max_score DESC, chunk_count DESC
+                   chunk_count,
+                   'text' AS modality
+            ORDER BY max_score DESC
             LIMIT $top_k
             """
+            
+            chunk_results = self.neo4j_manager.query_graph(
+                chunk_query,
+                {"query_embedding": query_embedding, "top_k": top_k}
+            )
+            
+            # Then, search tables (if index exists)
+            table_results = []
+            try:
+                table_query = """
+                CALL db.index.vector.queryNodes('table_vector_index', $top_k * 3, $query_embedding)
+                YIELD node AS table, score
+                MATCH (table)-[:IN_DOCUMENT]->(doc:Document)
+                WITH doc, MAX(score) AS max_score, AVG(score) AS avg_score, COUNT(table) AS table_count
+                RETURN doc.id AS doc_id, 
+                       COALESCE(doc.source_file, doc.id) AS title,
+                       max_score AS score,
+                       avg_score,
+                       table_count,
+                       'table' AS modality
+                ORDER BY max_score DESC
+                LIMIT $top_k
+                """
+                table_results = self.neo4j_manager.query_graph(
+                    table_query,
+                    {"query_embedding": query_embedding, "top_k": top_k}
+                )
+            except Exception as table_error:
+                self._logger.debug(f"   Table index not available or error: {table_error}")
+            
+            # Combine and aggregate results by document
+            doc_scores = {}
+            for record in chunk_results:
+                doc_id = record.get("doc_id", "")
+                if doc_id not in doc_scores:
+                    doc_scores[doc_id] = {
+                        "doc_id": doc_id,
+                        "title": record.get("title", ""),
+                        "scores": [],
+                        "modalities": set()
+                    }
+                doc_scores[doc_id]["scores"].append(record.get("score", 0.0))
+                doc_scores[doc_id]["modalities"].add("text")
+            
+            for record in table_results:
+                doc_id = record.get("doc_id", "")
+                if doc_id not in doc_scores:
+                    doc_scores[doc_id] = {
+                        "doc_id": doc_id,
+                        "title": record.get("title", ""),
+                        "scores": [],
+                        "modalities": set()
+                    }
+                doc_scores[doc_id]["scores"].append(record.get("score", 0.0))
+                doc_scores[doc_id]["modalities"].add("table")
+            
+            # Aggregate scores: take max score, boost if multiple modalities
+            formatted_results = []
+            for doc_id, data in doc_scores.items():
+                max_score = max(data["scores"])
+                modality_boost = 1.2 if len(data["modalities"]) > 1 else 1.0  # Boost multimodal matches
+                final_score = max_score * modality_boost
+                formatted_results.append({
+                    "doc_id": doc_id,
+                    "title": data["title"],
+                    "score": final_score
+                })
+            
+            # Sort by score and limit
+            formatted_results.sort(key=lambda x: x["score"], reverse=True)
+            formatted_results = formatted_results[:top_k]
             
             results = self.neo4j_manager.query_graph(
                 cypher_query,
@@ -175,6 +249,8 @@ class Neo4jMultiModalRetriever:
             # Ensure consistent format
             formatted_results = []
             for record in results:
+                modalities = record.get("modalities", [])
+                self._logger.debug(f"   Document {record.get('doc_id')}: score={record.get('score'):.4f}, modalities={modalities}")
                 formatted_results.append({
                     "doc_id": record.get("doc_id", ""),
                     "title": record.get("title", ""),
@@ -191,10 +267,37 @@ class Neo4jMultiModalRetriever:
             
         except Exception as e:
             elapsed_time = time.time() - start_time
-            self._logger.warning(f"⚠️  [VECTOR] Vector retrieval failed after {elapsed_time:.3f}s: {e}")
-            self._logger.info("   Attempting fallback vector search...")
-            # Fallback: manual cosine similarity if vector index not available
-            return self._fallback_vector_search(query_embedding, top_k)
+            self._logger.warning(f"⚠️  [VECTOR] Multimodal vector retrieval failed after {elapsed_time:.3f}s: {e}")
+            self._logger.info("   Attempting text-only vector search...")
+            # Fallback: text-only search if table index doesn't exist
+            try:
+                cypher_query = """
+                CALL db.index.vector.queryNodes('text_chunk_vector_index', $top_k * 3, $query_embedding)
+                YIELD node AS chunk, score
+                MATCH (chunk)-[:IN_DOCUMENT]->(doc:Document)
+                WITH doc, MAX(score) AS max_score, AVG(score) AS avg_score, COUNT(chunk) AS chunk_count
+                RETURN doc.id AS doc_id, 
+                       COALESCE(doc.source_file, doc.id) AS title,
+                       max_score AS score
+                ORDER BY max_score DESC
+                LIMIT $top_k
+                """
+                results = self.neo4j_manager.query_graph(
+                    cypher_query,
+                    {"query_embedding": query_embedding, "top_k": top_k}
+                )
+                formatted_results = []
+                for record in results:
+                    formatted_results.append({
+                        "doc_id": record.get("doc_id", ""),
+                        "title": record.get("title", ""),
+                        "score": float(record.get("score", 0.0))
+                    })
+                self._logger.info(f"✅ [VECTOR-FALLBACK] Retrieved {len(formatted_results)} documents (text-only)")
+                return formatted_results
+            except Exception as e2:
+                self._logger.warning(f"⚠️  [VECTOR] Fallback also failed: {e2}")
+                return self._fallback_vector_search(query_embedding, top_k)
 
     def _fallback_vector_search(
         self,

@@ -112,10 +112,13 @@ Please provide a detailed answer based on the context above. Include source cita
         self._logger.debug(f"Fetching chunk content for {len(doc_ids)} documents")
         
         try:
-            # Fetch top chunks for each document (ordered by chunk_index)
+            # Fetch top chunks AND tables for each document (ordered by chunk_index/page)
+            # Use a simpler approach: fetch chunks and tables separately, then combine in Python
+            # This avoids UNION ALL syntax issues
             cypher_query = """
+            // Fetch text chunks
             MATCH (c:Chunk)-[:IN_DOCUMENT]->(doc:Document)
-            WHERE doc.id IN $doc_ids
+            WHERE doc.id IN $doc_ids AND c.modality = 'text'
             WITH doc, c
             ORDER BY doc.id, c.chunk_index ASC
             WITH doc, collect(c)[..$max_chunks] AS chunks
@@ -125,17 +128,44 @@ Please provide a detailed answer based on the context above. Include source cita
                    chunk.id AS chunk_id,
                    chunk.content AS content,
                    chunk.modality AS modality,
-                   chunk.chunk_index AS chunk_index
-            ORDER BY doc.id, chunk.chunk_index ASC
+                   chunk.chunk_index AS chunk_index,
+                   COALESCE(chunk.page, 1) AS page
             """
             
-            results = self.neo4j_manager.query_graph(
+            # First, fetch chunks
+            chunk_results = self.neo4j_manager.query_graph(
                 cypher_query,
                 {
                     "doc_ids": doc_ids,
                     "max_chunks": max_chunks_per_doc
                 }
             )
+            
+            # Then, fetch tables
+            table_query = """
+            MATCH (t:Table)-[:IN_DOCUMENT]->(doc:Document)
+            WHERE doc.id IN $doc_ids
+            RETURN doc.id AS doc_id,
+                   doc.source_file AS doc_title,
+                   t.id AS chunk_id,
+                   t.content AS content,
+                   'table' AS modality,
+                   COALESCE(t.page, 1) AS chunk_index,
+                   COALESCE(t.page, 1) AS page
+            ORDER BY doc.id, t.page ASC
+            LIMIT $max_chunks
+            """
+            
+            table_results = self.neo4j_manager.query_graph(
+                table_query,
+                {
+                    "doc_ids": doc_ids,
+                    "max_chunks": max_chunks_per_doc
+                }
+            )
+            
+            # Combine results
+            results = list(chunk_results) + list(table_results)
             
             chunks = []
             for record in results:
@@ -145,7 +175,8 @@ Please provide a detailed answer based on the context above. Include source cita
                     "chunk_id": record.get("chunk_id", ""),
                     "content": record.get("content", ""),
                     "modality": record.get("modality", "text"),
-                    "chunk_index": record.get("chunk_index", 0)
+                    "chunk_index": record.get("chunk_index", 0),
+                    "page": record.get("page", None)
                 })
             
             elapsed_time = time.time() - start_time
@@ -180,9 +211,16 @@ Please provide a detailed answer based on the context above. Include source cita
             content = chunk.get("content", "")
             doc_title = chunk.get("doc_title", chunk.get("doc_id", "Unknown"))
             chunk_idx = chunk.get("chunk_index", 0)
+            page = chunk.get("page")
+            modality = chunk.get("modality", "text")
             
-            # Format: [Source: doc_name, Chunk {idx}]
-            chunk_text = f"[Source: {doc_title}, Chunk {chunk_idx}]\n{content}\n\n"
+            # Format with page number and modality information
+            if modality == "table":
+                page_info = f", Page {page}" if page else ""
+                chunk_text = f"[Source: {doc_title}, Table {chunk_idx}{page_info}]\n{content}\n\n"
+            else:
+                page_info = f", Page {page}" if page else ""
+                chunk_text = f"[Source: {doc_title}, Chunk {chunk_idx}{page_info}]\n{content}\n\n"
             
             if current_length + len(chunk_text) > max_length:
                 break
