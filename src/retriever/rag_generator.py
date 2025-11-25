@@ -55,24 +55,36 @@ class RAGGenerator:
             self._logger.error(f"Failed to initialize LLM: {e}")
             raise
         
-        # Setup prompt template
+        # Setup prompt template with enhanced instructions for tables and numerical data
         self.prompt_template = ChatPromptTemplate.from_messages([
             ("system", """You are a helpful assistant that answers questions based on the provided context from retrieved documents.
 
 Guidelines:
 - Answer based ONLY on the provided context
 - If the context doesn't contain enough information, say so
-- Cite sources using [Source: document_name] format
+- Cite sources using [Source: document_name, Chunk/Table X, Page Y] format
 - Be concise but comprehensive
 - If multiple sources mention the same information, you can combine them
-- Maintain accuracy and avoid hallucination"""),
+- Maintain accuracy and avoid hallucination
+
+SPECIAL INSTRUCTIONS FOR TABLES:
+- When context includes tables, carefully read the table structure (rows, columns, headers)
+- For questions about specific tables (e.g., "Table 3"), look for tables with matching identifiers
+- Extract exact numerical values from tables (e.g., "65%" not "about 65%")
+- Pay attention to column headers and row labels when answering questions
+- If a table shows multiple models/metrics, identify which one matches the question
+
+SPECIAL INSTRUCTIONS FOR COUNTING:
+- For "how many times" questions, count ALL occurrences in the provided context
+- If the context is limited, mention that the count is based on the provided context only
+- Be precise with numbers"""),
             ("human", """Context from retrieved documents:
 
 {context}
 
 Question: {query}
 
-Please provide a detailed answer based on the context above. Include source citations where relevant.""")
+Please provide a detailed answer based on the context above. Include source citations where relevant. For table questions, extract exact values. For counting questions, count all occurrences in the context.""")
         ])
         
         self.chain = self.prompt_template | self.llm | StrOutputParser()
@@ -90,10 +102,26 @@ Please provide a detailed answer based on the context above. Include source cita
             logger.addHandler(handler)
         return logger
 
+    def _is_counting_query(self, query: str) -> bool:
+        """Check if query is asking for a count (e.g., 'how many times')"""
+        if not query:
+            return False
+        counting_patterns = [
+            r'how many times',
+            r'how many mentions',
+            r'how many occurrences',
+            r'count.*times',
+            r'number of times'
+        ]
+        import re
+        query_lower = query.lower()
+        return any(re.search(pattern, query_lower) for pattern in counting_patterns)
+    
     def fetch_chunk_content(
         self,
         doc_ids: List[str],
-        max_chunks_per_doc: int = 3
+        max_chunks_per_doc: int = 3,
+        query: str = None
     ) -> List[Dict[str, Any]]:
         """
         Fetch chunk content for retrieved documents.
@@ -101,6 +129,7 @@ Please provide a detailed answer based on the context above. Include source cita
         Args:
             doc_ids: List of document IDs
             max_chunks_per_doc: Maximum chunks to fetch per document
+            query: Optional query string for table-specific retrieval
         
         Returns:
             List of chunks with content, doc_id, and metadata
@@ -110,6 +139,20 @@ Please provide a detailed answer based on the context above. Include source cita
         
         start_time = time.time()
         self._logger.debug(f"Fetching chunk content for {len(doc_ids)} documents")
+        
+        # For counting queries, fetch more chunks for accurate counting
+        if query and self._is_counting_query(query):
+            max_chunks_per_doc = 50  # Fetch more chunks for accurate counting
+            self._logger.debug(f"Detected counting query - fetching {max_chunks_per_doc} chunks per doc")
+        
+        # Check if query mentions a specific table (e.g., "Table 3", "Table 5")
+        table_identifier = None
+        if query:
+            import re
+            table_match = re.search(r'Table\s+(\d+)', query, re.IGNORECASE)
+            if table_match:
+                table_identifier = f"Table {table_match.group(1)}"
+                self._logger.debug(f"Detected table-specific query: {table_identifier}")
         
         try:
             # Fetch top chunks AND tables for each document (ordered by chunk_index/page)
@@ -141,28 +184,76 @@ Please provide a detailed answer based on the context above. Include source cita
                 }
             )
             
-            # Then, fetch tables
-            table_query = """
-            MATCH (t:Table)-[:IN_DOCUMENT]->(doc:Document)
-            WHERE doc.id IN $doc_ids
-            RETURN doc.id AS doc_id,
-                   doc.source_file AS doc_title,
-                   t.id AS chunk_id,
-                   t.content AS content,
-                   'table' AS modality,
-                   COALESCE(t.page, 1) AS chunk_index,
-                   COALESCE(t.page, 1) AS page
-            ORDER BY doc.id, t.page ASC
-            LIMIT $max_chunks
-            """
-            
-            table_results = self.neo4j_manager.query_graph(
-                table_query,
-                {
-                    "doc_ids": doc_ids,
-                    "max_chunks": max_chunks_per_doc
-                }
-            )
+            # Then, fetch tables - prioritize specific table if mentioned in query
+            if table_identifier:
+                # Fetch specific table first
+                table_query = """
+                MATCH (t:Table)-[:IN_DOCUMENT]->(doc:Document)
+                WHERE doc.id IN $doc_ids AND t.table_identifier = $table_identifier
+                RETURN doc.id AS doc_id,
+                       doc.source_file AS doc_title,
+                       t.id AS chunk_id,
+                       t.content AS content,
+                       'table' AS modality,
+                       COALESCE(t.page, 1) AS chunk_index,
+                       COALESCE(t.page, 1) AS page,
+                       t.table_identifier AS table_identifier
+                ORDER BY doc.id, t.page ASC
+                LIMIT 10
+                """
+                table_results = self.neo4j_manager.query_graph(
+                    table_query,
+                    {
+                        "doc_ids": doc_ids,
+                        "table_identifier": table_identifier
+                    }
+                )
+                # Also fetch other tables if needed
+                if not table_results:
+                    table_query = """
+                    MATCH (t:Table)-[:IN_DOCUMENT]->(doc:Document)
+                    WHERE doc.id IN $doc_ids
+                    RETURN doc.id AS doc_id,
+                           doc.source_file AS doc_title,
+                           t.id AS chunk_id,
+                           t.content AS content,
+                           'table' AS modality,
+                           COALESCE(t.page, 1) AS chunk_index,
+                           COALESCE(t.page, 1) AS page,
+                           t.table_identifier AS table_identifier
+                    ORDER BY doc.id, t.page ASC
+                    LIMIT $max_chunks
+                    """
+                    table_results = self.neo4j_manager.query_graph(
+                        table_query,
+                        {
+                            "doc_ids": doc_ids,
+                            "max_chunks": max_chunks_per_doc
+                        }
+                    )
+            else:
+                # Fetch all tables
+                table_query = """
+                MATCH (t:Table)-[:IN_DOCUMENT]->(doc:Document)
+                WHERE doc.id IN $doc_ids
+                RETURN doc.id AS doc_id,
+                       doc.source_file AS doc_title,
+                       t.id AS chunk_id,
+                       t.content AS content,
+                       'table' AS modality,
+                       COALESCE(t.page, 1) AS chunk_index,
+                       COALESCE(t.page, 1) AS page,
+                       t.table_identifier AS table_identifier
+                ORDER BY doc.id, t.page ASC
+                LIMIT $max_chunks
+                """
+                table_results = self.neo4j_manager.query_graph(
+                    table_query,
+                    {
+                        "doc_ids": doc_ids,
+                        "max_chunks": max_chunks_per_doc
+                    }
+                )
             
             # Combine results
             results = list(chunk_results) + list(table_results)
@@ -272,8 +363,8 @@ Please provide a detailed answer based on the context above. Include source cita
         doc_ids = [doc.get("doc_id", "") for doc in retrieved_docs if doc.get("doc_id")]
         self._logger.info(f"   Retrieved {len(doc_ids)} document IDs")
         
-        # Step 2: Fetch chunk content
-        chunks = self.fetch_chunk_content(doc_ids, max_chunks_per_doc=3)
+        # Step 2: Fetch chunk content (pass query for table-specific retrieval)
+        chunks = self.fetch_chunk_content(doc_ids, max_chunks_per_doc=3, query=query)
         step_time = time.time() - step_start
         self._logger.info(f"✅ Fetched {len(chunks)} chunks from {len(doc_ids)} documents (took {step_time:.3f}s)")
         

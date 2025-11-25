@@ -1,0 +1,35 @@
+Question,Correct Answer,Generated Answer,Sources
+What is the primary challenge addressed by the introduction of the Linked WikiText-2 dataset?,The primary challenge addressed is incorporating factual knowledge into language models due to difficulty in obtaining training data that describes which entities or facts each token is referring to.,"The primary challenge addressed by the introduction of the Linked WikiText-2 dataset is that traditional language models are only capable of remembering facts seen at training time and often have difficulty recalling them [Source: data\raw\DocBench\0\P19-1598.pdf, Chunk 1, Page 1]. This limitation is highlighted in the abstract as a major issue with current language modeling approaches.","[{'title': 'data\\raw\\DocBench\\0\\P19-1598.pdf', 'doc_id': 'data\\raw\\DocBench\\0\\P19-1598.pdf', 'chunks_used': 6}]"
+What is the top-1 accuracy of the Oracle KGLM on birthdate prediction?,The top-1 accuracy of the Oracle KGLM on birthdate prediction is 65%.,"Unfortunately, I do not have enough information to answer your question about the top-1 accuracy of the Oracle KGLM on birthdate prediction.
+
+The provided context discusses a knowledge graph language model (KGLM) and its performance compared to a strong baseline language model, but it does not mention any specific results for birthdate prediction. The tables provided in the context only contain general statistics about the Linked WikiText-2 dataset and do not include any information related to the accuracy of the Oracle KGLM on birthdate prediction.
+
+If you have more documents or context that might be relevant to this question, I would be happy to try and assist you further.","[{'title': 'data\\raw\\DocBench\\0\\P19-1598.pdf', 'doc_id': 'data\\raw\\DocBench\\0\\P19-1598.pdf', 'chunks_used': 6}]"
+How many documents are there in the training set of the Linked WikiText-2 Corpus?,There are 600 documents in the training set.,"According to Table 5 (Page 5) [Source: data\raw\DocBench\0\P19-1598.pdf], there are 600 documents in the training set of the Linked WikiText-2 Corpus.
+
+[Source: data\raw\DocBench\0\P19-1598.pdf, Table 5, Page 5]
+
+| Train | Dev | Test |
+| --- | --- | --- |
+| Documents | 600 | 60 | 60 |
+
+Note that this count is based on the provided context only.","[{'title': 'data\\raw\\DocBench\\0\\P19-1598.pdf', 'doc_id': 'data\\raw\\DocBench\\0\\P19-1598.pdf', 'chunks_used': 6}]"
+Which language model has the lowest Perplexity (PPL) according to Table 3?,KGLM has the lowest Perplexity (PPL) with a score of 44.1.,"There is no Table 3 mentioned in the provided context. However, I can answer your question based on the information available in Table 7.
+
+According to Table 7 [Source: data\raw\DocBench\0\P19-1598.pdf, Table 7, Page 7], the language model with the lowest Perplexity (PPL) is KGLM* with a PPL of 44.1.","[{'title': 'data\\raw\\DocBench\\0\\P19-1598.pdf', 'doc_id': 'data\\raw\\DocBench\\0\\P19-1598.pdf', 'chunks_used': 4}]"
+Who is the last author of the paper?,Sameer Singh,"The last author of the paper ""Barack's Wife Hillary: Using Knowledge Graphs for Fact-Aware Language Modeling"" is Sameer Singh.
+
+[Source: data\raw\DocBench\0\P19-1598.pdf, Chunk 0, Page 1]
+
+Note that the context does not provide any information about the authors' order or ranking. However, based on the provided chunks, it can be inferred that Sameer Singh is one of the last authors mentioned in the abstract and introduction sections.","[{'title': 'data\\raw\\DocBench\\0\\P19-1598.pdf', 'doc_id': 'data\\raw\\DocBench\\0\\P19-1598.pdf', 'chunks_used': 6}]"
+On which page does the paper introduce the corpus statistics?,Page 5,"The paper introduces the corpus statistics, specifically Table 5, on Page 5.
+
+[Source: data\raw\DocBench\0\P19-1598.pdf, Table 5, Page 5] 
+
+This table provides information about the Linked WikiText-2 dataset, including its size and characteristics.","[{'title': 'data\\raw\\DocBench\\0\\P19-1598.pdf', 'doc_id': 'data\\raw\\DocBench\\0\\P19-1598.pdf', 'chunks_used': 6}]"
+How many time does the paper mention WikiText-2?,31,"The paper mentions WikiText-2 twice:
+
+1. In Chunk 1 (Page 1), it is mentioned as ""the popular WikiText-2 benchmark"" [Source: data\raw\DocBench\0\P19-1598.pdf, Chunk 1, Page 1].
+2. In the abstract, it is referred to as ""Linked WikiText-2 dataset"", a corpus of annotated text aligned to the Wikidata knowledge graph whose contents (roughly) match the popular WikiText-2 benchmark [Source: data\raw\DocBench\0\P19-1598.pdf, Chunk 1, Page 1].
+
+Therefore, the paper mentions WikiText-2 two times.","[{'title': 'data\\raw\\DocBench\\0\\P19-1598.pdf', 'doc_id': 'data\\raw\\DocBench\\0\\P19-1598.pdf', 'chunks_used': 6}]"

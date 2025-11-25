@@ -361,4 +361,3 @@ class QALFPipeline:
             }
         
         return result
-

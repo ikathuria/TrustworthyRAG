@@ -238,30 +238,12 @@ class Neo4jMultiModalRetriever:
             formatted_results.sort(key=lambda x: x["score"], reverse=True)
             formatted_results = formatted_results[:top_k]
             
-            results = self.neo4j_manager.query_graph(
-                cypher_query,
-                {
-                    "query_embedding": query_embedding,
-                    "top_k": top_k
-                }
-            )
-            
-            # Ensure consistent format
-            formatted_results = []
-            for record in results:
-                modalities = record.get("modalities", [])
-                self._logger.debug(f"   Document {record.get('doc_id')}: score={record.get('score'):.4f}, modalities={modalities}")
-                formatted_results.append({
-                    "doc_id": record.get("doc_id", ""),
-                    "title": record.get("title", ""),
-                    "score": float(record.get("score", 0.0))
-                })
-            
             elapsed_time = time.time() - start_time
             self._logger.info(f"✅ [VECTOR] Retrieved {len(formatted_results)} documents in {elapsed_time:.3f}s")
             if formatted_results:
                 top_score = formatted_results[0].get("score", 0.0)
-                self._logger.debug(f"   Top score: {top_score:.4f}")
+                modalities_found = doc_scores.get(formatted_results[0].get("doc_id", ""), {}).get("modalities", set())
+                self._logger.debug(f"   Top score: {top_score:.4f}, modalities: {modalities_found}")
             
             return formatted_results
             

@@ -166,13 +166,35 @@ def query_pipeline():
     # Note: all-MiniLM-L6-v2 produces 384-dimensional embeddings
     # Enable generator for RAG responses
     enable_generator = True  # Set to False to disable generation
+    
+    # Model configuration - can be changed here or via environment variables
+    import os
+    llm_model = os.getenv("OLLAMA_MODEL", C.OLLAMA_MODEL)  # Default: llama3.1:8b
+    llm_temperature = float(os.getenv("OLLAMA_TEMPERATURE", "0.3"))
+    
+    print(f"   Using LLM: {llm_model} (temperature: {llm_temperature})")
+    print(f"   To change model, set OLLAMA_MODEL environment variable")
+    print(f"   Example: export OLLAMA_MODEL=llama3.2:3b")
+    
     qalf_pipeline = QALFPipeline(
         neo4j_manager=neo4j_manager,
         embedding_model=C.TRANSFORMER_EMBEDDING_MODEL,
         embedding_dim=384,  # Dimension for all-MiniLM-L6-v2
         enable_generator=enable_generator,
-        generator_temperature=0.3
+        generator_temperature=llm_temperature
     )
+    
+    # Override generator LLM model if different from default
+    if enable_generator and qalf_pipeline.generator and llm_model != C.OLLAMA_MODEL:
+        from langchain_ollama import OllamaLLM
+        from langchain_core.output_parsers import StrOutputParser
+        qalf_pipeline.generator.llm = OllamaLLM(
+            model=llm_model,
+            temperature=llm_temperature,
+            base_url=C.OLLAMA_URI
+        )
+        qalf_pipeline.generator.chain = qalf_pipeline.generator.prompt_template | qalf_pipeline.generator.llm | StrOutputParser()
+        print(f"   ✓ Generator LLM updated to: {llm_model}")
     print("✓ QALF pipeline initialized")
     if enable_generator and qalf_pipeline.generator:
         print("✓ RAG Generator enabled")

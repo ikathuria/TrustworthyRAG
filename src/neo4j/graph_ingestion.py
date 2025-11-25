@@ -342,6 +342,25 @@ class GraphDBManager(Neo4jManager):
         for idx, table_data in enumerate(tables):
             table_id = f"{doc_id}_table_{idx}"
             content = table_data.get('content', '')
+            
+            # Extract table identifier (e.g., "Table 3", "Table 5") from content
+            import re
+            table_identifier = None
+            # Look for patterns like "Table 3", "Table 5", "Table III", etc.
+            table_patterns = [
+                r'Table\s+(\d+)',  # "Table 3", "Table 5"
+                r'Table\s+([IVX]+)',  # "Table III", "Table V"
+                r'TABLE\s+(\d+)',  # "TABLE 3"
+            ]
+            for pattern in table_patterns:
+                match = re.search(pattern, content[:500], re.IGNORECASE)  # Check first 500 chars
+                if match:
+                    table_identifier = f"Table {match.group(1)}"
+                    break
+            
+            # If no identifier found, use index-based identifier
+            if not table_identifier:
+                table_identifier = f"Table {idx + 1}"
 
             # Create Table node
             query = """
@@ -349,7 +368,8 @@ class GraphDBManager(Neo4jManager):
             SET t.content = $content,
                 t.bbox = $bbox,
                 t.page = $page,
-                t.modality = 'table'
+                t.modality = 'table',
+                t.table_identifier = $table_identifier
             WITH t
             MATCH (d:Document {id: $doc_id})
             MERGE (t)-[:IN_DOCUMENT]->(d)
@@ -363,6 +383,7 @@ class GraphDBManager(Neo4jManager):
                     content=content,
                     bbox=str(table_data.get('bbox', [])),
                     page=table_data.get('page', 1),
+                    table_identifier=table_identifier,
                     doc_id=doc_id
                 )
             stats['tables'] += 1

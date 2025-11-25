@@ -9,7 +9,10 @@ PROCESSED_DATA_DIR = DATA_DIR + "processed/"
 EXTRACTED_TEXT_DIR = DATA_DIR + "extracted_text/"
 EXTRACTED_IMAGES_DIR = DATA_DIR + "extracted_images/"
 
+DOC_BENCHMARK_DIR = DATA_DIR + "DocBench/"
+
 TEST_PDF = DATA_DIR + "WickedRose_andNCPH.pdf"
+GROUND_TRUTH_PATH = DOC_BENCHMARK_DIR + "0/0_qa.jsonl"
 
 # MinerU2.5 - Vision-Language Model
 MINERU_MODEL_NAME = "opendatalab/MinerU2.5-2509-1.2B"
