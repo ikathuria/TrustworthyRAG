@@ -29,6 +29,7 @@ class ParsedContent:
             "parsed_at": self.parsed_at.isoformat()
         }, indent=4)
     
+    @staticmethod
     def from_json(json_str: str) -> 'ParsedContent':
         data = json.loads(json_str)
         data['parsed_at'] = datetime.fromisoformat(data['parsed_at'])
@@ -38,6 +39,7 @@ class ParsedContent:
         with open(file_path, 'wb') as f:
             pickle.dump(self, f)
 
+    @staticmethod
     def from_pkl(file_path: str) -> 'ParsedContent':
         with open(file_path, 'rb') as f:
             return pickle.load(f)

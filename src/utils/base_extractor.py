@@ -26,8 +26,8 @@ class Entity:
 @dataclass
 class Relation:
     """Relationship between entities"""
-    source: Entity              # Source entity
-    target: Entity              # Target entity
+    source: str                 # Source entity name/id
+    target: str                 # Target entity name/id
     type: str                   # Relation type (e.g., "EXPLOITS")
     confidence: float = 0.8     # Confidence score
     context: str = ""           # Supporting context

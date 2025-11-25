@@ -1,4 +1,6 @@
 """Constants used across the project."""
+import os
+
 
 CONFIG_DIR = "configs/"
 SCHEMA_FILE = "cybersecurity.yml"
@@ -26,7 +28,7 @@ NEO4J_DB = "neo4j"
 NEO4J_URI = "neo4j://127.0.0.1:7687"
 NEO4J_USERNAME = "neo4j"
 # NEO4J_PASSWORD = "U9N-cdOWgzANt8k-0pjDm6l6lqiniUSI8FIodgcMX2U"
-NEO4J_PASSWORD = "test1234"
+NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "test1234")
 
 # Spacy
 SPACY_MODEL = "en_core_web_sm"
