@@ -1,0 +1,29 @@
+# Generic Knowledge Graph Schema
+
+# Node Types
+nodes:
+  - Concept
+  - Person
+  - Organization
+  - Location
+  - Event
+  - Object
+  - Technology
+  - Process
+  - Document
+  - Chunk
+  - Image
+  - Table
+
+# Relationship Types
+relationships:
+  - RELATED_TO
+  - PART_OF
+  - USES
+  - PRODUCED_BY
+  - LOCATED_AT
+  - INVOLVES
+  - DEFINED_AS
+  - HAS_ATTRIBUTE
+  - CAUSES
+  - FOLLOWED_BY

@@ -1,0 +1,24 @@
+# QALF Evaluation Configuration
+
+neo4j:
+  uri: "bolt://localhost:7687"
+  username: "neo4j"
+  password: "password"
+  database: "neo4j"
+
+datasets:
+  # Path to clean queries JSONL/CSV
+  clean: "data/docbench_clean.jsonl"
+  
+  # Path to adversarial queries (poisoned)
+  adversarial: "data/mm_poisonrag_queries.jsonl"
+  
+  # Path to attack metadata (target doc/answer mapping)
+  attack_metadata: "data/attack_metadata.json"
+
+evaluation:
+  top_k: 10
+  
+# System specific settings
+embedding_model: "all-MiniLM-L6-v2"
+embedding_dim: 384

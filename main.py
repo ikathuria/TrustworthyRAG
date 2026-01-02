@@ -97,9 +97,7 @@ def ingest_pipeline(file_paths: List[str]) -> Dict[str, Any]:
         uri=C.NEO4J_URI,
         username=C.NEO4J_USERNAME,
         password=C.NEO4J_PASSWORD,
-        database=C.NEO4J_DB,
-        allowed_nodes=[],
-        allowed_relationships=[]
+        database=C.NEO4J_DB
     )
 
     graph_stats = graph_manager.ingest_batch_parsed_content(parsed_contents)

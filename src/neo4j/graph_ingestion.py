@@ -40,14 +40,40 @@ class GraphDBManager(Neo4jManager):
         self.initialize_schema()
 
     def initialize_schema(self):
-        """Initialize graph transformer for LLM-based extraction"""
+        """Initialize graph transformer for LLM-based extraction with generic schema"""
+        # Load schema from config file
+        import yaml
+        import os
+        
+        schema_path = "configs/schema.yml"
+        if os.path.exists(schema_path):
+            try:
+                with open(schema_path, 'r') as f:
+                    schema = yaml.safe_load(f)
+                    self.allowed_nodes = schema.get('nodes', [])
+                    self.allowed_relationships = schema.get('relationships', [])
+                    self._logger.info(f"Loaded schema from {schema_path}: {len(self.allowed_nodes)} nodes, {len(self.allowed_relationships)} relationships")
+            except Exception as e:
+                self._logger.warning(f"Failed to load schema from {schema_path}: {e}")
+        
+        # Additional instructions for the LLM to improve extraction quality
+        instructions = (
+            "Extract a knowledge graph from the text. "
+            "Focus on capturing key concepts, definitions, and relationships. "
+            "Use the provided schema strictly. "
+            "For 'Concept' nodes, try to find 'DEFINED_AS' relationships if a definition is present. "
+            "Resolve pronouns where possible to link to the correct entities."
+        )
+
         self.graph_transformer = LLMGraphTransformer(
             llm=self.llm,
             allowed_nodes=self.allowed_nodes,
             allowed_relationships=self.allowed_relationships,
-            strict_mode=False,  # Allow flexible schema
+            strict_mode=False,  # Allow some flexibility but guided by schema
+            # Note: instructions might need to be passed differently depending on version, 
+            # but allowed_nodes/relationships is the primary constraint.
         )
-        self._logger.info("LLM Graph Transformer initialized")
+        self._logger.info("LLM Graph Transformer initialized with schema")
 
         # Create constraints for unique entities
         constraints = [

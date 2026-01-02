@@ -13,7 +13,7 @@ EXTRACTED_IMAGES_DIR = DATA_DIR + "extracted_images/"
 
 DOC_BENCHMARK_DIR = DATA_DIR + "DocBench/"
 
-TEST_PDF = DATA_DIR + "WickedRose_andNCPH.pdf"
+TEST_PDF = RAW_DATA_DIR + "WickedRose_andNCPH.pdf"
 GROUND_TRUTH_PATH = DOC_BENCHMARK_DIR + "0/0_qa.jsonl"
 
 # MinerU2.5 - Vision-Language Model

@@ -17,7 +17,9 @@ class DocumentParser(BaseParser):
         super().__init__(config)
         if load_from_file and filepath:
             self.load_parsed_content([filepath])
-        self._initialize_model()
+        self.model = None
+        self.processor = None
+        self.client = None
 
     def _initialize_model(self):
         self.model = Qwen2VLForConditionalGeneration.from_pretrained(
@@ -48,6 +50,9 @@ class DocumentParser(BaseParser):
         return self.parsed_content
 
     def parse(self, file_path: str) -> ParsedContent:
+        if self.model is None:
+            self._initialize_model()
+            
         path = Path(file_path)
         try:
             if path.suffix.lower() in ['.png', '.jpg', '.jpeg', '.tiff', '.bmp']:
@@ -285,21 +290,62 @@ class DocumentParser(BaseParser):
         self._logger.info(f"Saved parsed content: {filepath} for {parsed_content.source_file}")
         return str(filepath)
 
-    def parse_batch(self, file_paths: List[str]) -> List[ParsedContent]:
-        """Parse multiple documents in a batch.
+    def parse_batch(self, file_paths: List[str], max_workers: int = 1) -> List[ParsedContent]:
+        """Parse multiple documents in a batch with caching and parallelism.
         
         Args:
             file_paths (List[str]): List of file paths to parse.
+            max_workers (int): Number of parallel workers for parsing.
         
         Returns:
             List[ParsedContent]: List of parsed content objects.
         """
-        results = []
-        for file_path in file_paths:
-            try:
-                results.append(self.parse(file_path))
-                self._logger.info(f"Parsed: {file_path}")
-            except Exception as e:
-                self._logger.error(f"Failed: {file_path} - {str(e)}")
-                traceback.print_exc()
-        return results
+        import concurrent.futures
+        
+        results = [None] * len(file_paths)
+        files_to_parse = []
+        
+        # Check cache first
+        for i, file_path in enumerate(file_paths):
+            doc_name = Path(file_path).stem
+            cached_path = Path(C.PROCESSED_DATA_DIR) / f"{doc_name}_parsed.pkl"
+            
+            if cached_path.exists():
+                try:
+                    results[i] = ParsedContent.from_pkl(str(cached_path))
+                    self._logger.info(f"Loaded from cache: {cached_path}")
+                except Exception as e:
+                    self._logger.warning(f"Failed to load cache for {file_path}: {e}")
+                    files_to_parse.append((i, file_path))
+            else:
+                files_to_parse.append((i, file_path))
+        
+        if not files_to_parse:
+            return results
+
+        # Initialize model in main thread if needed (avoids race condition in threads)
+        if self.model is None:
+            self._logger.info("Initializing model for parsing...")
+            self._initialize_model()
+
+        # Process remaining files in parallel
+        self._logger.info(f"Parsing {len(files_to_parse)} files with {max_workers} workers...")
+        
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+            future_to_idx = {
+                executor.submit(self.parse, fp): idx 
+                for idx, fp in files_to_parse
+            }
+            
+            for future in concurrent.futures.as_completed(future_to_idx):
+                idx = future_to_idx[future]
+                file_path = file_paths[idx]
+                try:
+                    results[idx] = future.result()
+                    self._logger.info(f"Parsed: {file_path}")
+                except Exception as e:
+                    self._logger.error(f"Failed: {file_path} - {str(e)}")
+                    traceback.print_exc()
+                    
+        # Filter out Nones in case of failures
+        return [r for r in results if r is not None]
