@@ -1,147 +1,201 @@
-"""
-Evaluate Adaptive RAG Pipeline with QALF.
-
-This script orchestrates:
-1. Evaluate the results using the ground truth
-
-Usage:
-    python evaluate.py [--ground_truth {ground_truth}]
-"""
-
+import os
 import json
+import glob
 import pandas as pd
-from typing import List, Dict, Any
+import numpy as np
+from typing import List, Dict, Set, Any
+from tqdm import tqdm
+import logging
 import argparse
 
 from src.neo4j.neo4j_manager import Neo4jManager
-from src.retriever.qalf_pipeline import QALFPipeline
+from systems import SystemRegistry
 import src.utils.constants as C
+from metrics import ndcg_at_k, recall_at_k, hit_rate
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
+logger = logging.getLogger(__name__)
 
 
-def load_ground_truth(ground_truth_path: str) -> Dict[str, Any]:
-    """Load the ground truth from a file"""
-    questions = []
-    answers = []
+def normalize_path(path: str) -> str:
+    """Normalize path to match Neo4j IDs (which depend on how they were ingested)"""
+    return os.path.normpath(path)
 
-    with open(ground_truth_path, 'r') as f:
-        for line in f:
-            item = json.loads(line)
-            questions.append(item['question'])
-            answers.append(item['answer'])
 
-    return questions, answers
+def get_ingested_documents(neo4j_manager: Neo4jManager) -> Set[str]:
+    """Get set of all document IDs currently in Neo4j"""
+    query = "MATCH (d:Document) RETURN d.id as id"
+    with neo4j_manager.driver.session(database=neo4j_manager.database) as session:
+        result = session.run(query)
+        # Normalize paths for comparison
+        documents = {normalize_path(record["id"]) for record in result}
+    logger.info(f"Found {len(documents)} ingested documents in Neo4j")
+    return documents
 
-def evaluate_pipeline(questions: List[str], answers: List[str]):
-    """
-    Evaluate the results using the questions and answers
-    """
-    df = pd.DataFrame(
-        columns=["Question", "Correct Answer", "Generated Answer", "Sources"]
-    )
 
-    # Initialize Neo4j connection
-    print("\n1. Connecting to Neo4j...")
+def get_retrieved_doc_ids(
+    results: List[Dict[str, Any]], neo4j_manager: Neo4jManager
+) -> List[str]:
+    """Extract parent document IDs from retrieval results"""
+    doc_ids = []
+
+    for res in results:
+        # Check standard locations for doc ID
+        if "doc_id" in res:
+            doc_ids.append(normalize_path(res["doc_id"]))
+        elif "source" in res:
+            doc_ids.append(normalize_path(res["source"]))
+        elif "metadata" in res and "source" in res["metadata"]:
+            doc_ids.append(normalize_path(res["metadata"]["source"]))
+        # Sometimes doc_id is the source file path directly in this system
+
+    return doc_ids
+
+
+def run_evaluation(doc_bench_dir: str):
+    logger.info("Initializing evaluation...")
+
+    # Connect to Neo4j
     neo4j_manager = Neo4jManager(
         uri=C.NEO4J_URI,
         username=C.NEO4J_USERNAME,
         password=C.NEO4J_PASSWORD,
-        database=C.NEO4J_DB
+        database=C.NEO4J_DB,
     )
-    print("✓ Neo4j connected")
-    
-    qalf_pipeline = QALFPipeline(
-        neo4j_manager=neo4j_manager,
-        embedding_model=C.TRANSFORMER_EMBEDDING_MODEL,
-        enable_generator=True,
-        embedding_dim=384,
-    )
-    print("✓ QALF pipeline initialized")
 
-    for question, answer in zip(questions, answers):
-        full_result = qalf_pipeline.qalf_retrieve_and_generate(question, top_k=7)
-        results = full_result.get("retrieval", {}).get("results", [])
-        generation = full_result.get("generation")
-        answer_qalf = generation.get("response", "")
+    # Initialize Systems
+    registry = SystemRegistry(neo4j_manager)
 
-        if results:
-            # Display complexity and intent from first result (all results have same metadata)
-            first_result = results[0]
-            complexity = first_result.get('complexity', 'N/A')
-            intent = first_result.get('intent', 'N/A')
-            modalities = first_result.get('modalities', [])
+    # Setup indexes to ensure all necessary indices (like chunk_fulltext) exist
+    try:
+        logger.info("Setting up QALF indexes...")
+        registry.qalf.setup_indexes()
+        logger.info("✓ QALF indexes ready")
+    except Exception as e:
+        logger.warning(f"⚠️  Index setup note: {e}")
 
-            print(f"\n📊 Query Analysis:")
-            print(f"  Complexity (4D): {complexity}")
-            print(f"  Intent: {intent}")
-            print(f"  Active Modalities: {', '.join(modalities)}")
+    # Get available documents
+    ingested_docs = get_ingested_documents(neo4j_manager)
 
-            # Display generated response if available
-            if generation and generation.get("success"):
-                print(f"\n❓ Question: {question}")
-                print(f"\n✅ Correct Answer: {answer}")
+    if not ingested_docs:
+        logger.error("No documents found in Neo4j. Please run ingestion first.")
+        return
 
-                answer_qalf = generation.get("response", "")
+    # iterate through DocBench folders
+    subdirs = glob.glob(os.path.join(doc_bench_dir, "*"))
 
-                print(f"\n💬 Generated Answer:")
-                print(answer_qalf)
-                print("-" * 80)
+    all_results = []
 
-                # Display sources
-                sources = generation.get("sources", [])
-                if sources:
-                    print(f"\n📚 Sources ({len(sources)} documents):")
-                    for i, source in enumerate(sources, 1):
-                        print(f"  {i}. {source.get('title', 'Unknown')} "
-                              f"({source.get('chunks_used', 0)} chunks)")
+    for subdir in tqdm(subdirs, desc="Evaluating Directories"):
+        if not os.path.isdir(subdir):
+            continue
 
-                df = pd.concat([df, pd.DataFrame({"Question": [question], "Correct Answer": [answer], "Generated Answer": [answer_qalf], "Sources": [sources]})], ignore_index=True)
+        # Find PDF and QA file
+        pdf_files = glob.glob(os.path.join(subdir, "*.pdf"))
+        qa_files = glob.glob(os.path.join(subdir, "*_qa.jsonl"))
 
-                print(
-                    f"\n⏱️  Generation time: {generation.get('generation_time', 0):.2f}s")
-                print("-" * 80)
+        if not pdf_files or not qa_files:
+            continue
 
-            print(f"\n📄 Top Results [{len(results)}]:")
-            print("-" * 80)
+        # Assume 1 PDF per dir as per structure seen
+        pdf_path = normalize_path(pdf_files[0])
+        qa_path = qa_files[0]
 
-            for result in results:
-                print(f"\n[{result['rank']}] {result['title']}")
-                print(f"    Score: {result['score']:.4f} | "
-                        f"Consensus: {result['consensus']:.2f}")
+        # Check if this PDF is ingested
+        # We need to robustly match the ID.
+        # Ingestion logic uses absolute path usually, but sometimes relative.
+        # We check our normalized set.
 
-                # Try to get additional metadata if available
-                doc_id = result.get('doc_id', '')
-                if doc_id:
-                    print(f"    Doc ID: {doc_id}")
-
-            print("\n" + "-" * 80)
+        target_doc_id = None
+        if pdf_path in ingested_docs:
+            target_doc_id = pdf_path
         else:
-            print("\n⚠️  No results found.")
-            print("This could mean:")
-            print("  - No documents match the query")
-            print("  - Indexes may need to be created")
-            print("  - Documents may need to be ingested first")
-        
-        print("=" * 80)
+            # Try approximate match (basename)
+            pdf_basename = os.path.basename(pdf_path)
+            for doc in ingested_docs:
+                if doc.endswith(pdf_basename):
+                    target_doc_id = doc
+                    break
 
-    # Cleanup
-    neo4j_manager.close()
-    print("\n✓ QALF pipeline closed")
+        if not target_doc_id:
+            continue  # Skip non-ingested
 
-    print("-" * 80)
-    print("\n📊 QALF Results:")
-    print(df)
+        # Load Questions
+        with open(qa_path, "r", encoding="utf-8") as f:
+            for line_idx, line in enumerate(f):
+                try:
+                    item = json.loads(line)
+                    query = item["question"]
 
-    df.to_csv("qalf_results.csv", index=False)
+                    # For retrieval eval in single-doc QA, relevant_doc IS the target_doc_id
+                    relevant_ids = {target_doc_id}
+
+                    # Run Systems
+                    for sys_name in ["vector_only", "fixed_rrf", "qalf"]:
+                        try:
+                            # Execute retrieval
+                            if sys_name == "vector_only":
+                                results = registry.run_vector_only(query)
+                            elif sys_name == "fixed_rrf":
+                                results = registry.run_fixed_rrf(query)
+                            elif sys_name == "qalf":
+                                results = registry.run_qalf(query)
+
+                            retrieved_ids = get_retrieved_doc_ids(
+                                results, neo4j_manager
+                            )
+
+                            # DEBUG: Log if retrieval set is empty or mismatch
+                            # if not retrieved_ids:
+                            #    logger.debug(f"Query '{query}' returned no results for {sys_name}")
+
+                            # Calculate Metrics
+                            ndcg_10 = ndcg_at_k(retrieved_ids, relevant_ids, k=10)
+                            recall_10 = recall_at_k(retrieved_ids, relevant_ids, k=10)
+                            accuracy_1 = hit_rate(retrieved_ids, relevant_ids, k=1)
+
+                            all_results.append(
+                                {
+                                    "Directory": os.path.basename(subdir),
+                                    "Query_ID": f"{os.path.basename(subdir)}_{line_idx}",
+                                    "System": sys_name,
+                                    "NDCG@10": ndcg_10,
+                                    "Recall@10": recall_10,
+                                    "Accuracy@1": accuracy_1,
+                                }
+                            )
+
+                        except Exception as e:
+                            logger.error(
+                                f"Error running {sys_name} for query in {subdir}: {e}"
+                            )
+
+                except json.JSONDecodeError:
+                    continue
+
+    # Save and Summarize
+    if not all_results:
+        logger.warning("No evaluation results generated.")
+        return
+
+    df = pd.DataFrame(all_results)
+    df.to_csv("evaluation_results.csv", index=False)
+
+    # Pivot for summary table
+    summary = df.groupby("System")[["NDCG@10", "Recall@10", "Accuracy@1"]].mean()
+    print("\n=== Evaluation Results ===")
+    print(summary)
+    print("\nResults saved to evaluation_results.csv")
+
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="Evaluate Adaptive RAG Pipeline with QALF")
+    parser = argparse.ArgumentParser()
     parser.add_argument(
-        '--ground_truth',
-        type=str,
-        default=C.GROUND_TRUTH_PATH,
-        help='Path to the ground truth file'
+        "--doc_bench_dir", default="data/raw/DocBench", help="Path to DocBench data"
     )
     args = parser.parse_args()
-    questions, answers = load_ground_truth(args.ground_truth)
-    evaluate_pipeline(questions, answers)
+
+    run_evaluation(args.doc_bench_dir)

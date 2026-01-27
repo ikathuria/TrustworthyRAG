@@ -15,10 +15,10 @@ class Neo4jManager:
         uri: str = C.NEO4J_URI,
         username: str = C.NEO4J_USERNAME,
         password: str = C.NEO4J_PASSWORD,
-        database: str = C.NEO4J_DB
+        database: str = C.NEO4J_DB,
     ):
         """Initialize Neo4jManager with connection parameters
-        
+
         Args:
             uri (str): Neo4j URI
             username (str): Neo4j username
@@ -40,7 +40,7 @@ class Neo4jManager:
         if not logger.handlers:
             handler = logging.StreamHandler()
             formatter = logging.Formatter(
-                '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+                "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
             )
             handler.setFormatter(formatter)
             logger.addHandler(handler)
@@ -50,8 +50,7 @@ class Neo4jManager:
         """Establish connection to Neo4j"""
         try:
             self.driver = GraphDatabase.driver(
-                self.uri,
-                auth=(self.username, self.password)
+                self.uri, auth=(self.username, self.password)
             )
             # Test connection
             with self.driver.session(database=self.database) as session:
@@ -61,14 +60,16 @@ class Neo4jManager:
             self._logger.error(f"Failed to connect to Neo4j: {str(e)}")
             raise
 
-    def query_graph(self, query: str, params: Dict[str, Any] = None) -> List[Dict[str, Any]]:
+    def query_graph(
+        self, query: str, params: Dict[str, Any] = None
+    ) -> List[Dict[str, Any]]:
         """
         Execute a Cypher query and return results as list of dicts.
-        
+
         Args:
             query: Cypher query string
             params: Query parameters (optional)
-            
+
         Returns:
             List of result records as dictionaries
         """
@@ -76,7 +77,7 @@ class Neo4jManager:
             params = {}
 
         start_time = time.time()
-        
+
         # Log query details (truncate long queries for readability)
         query_preview = query[:200] + "..." if len(query) > 200 else query
         self._logger.info(f"🔍 Executing Neo4j query (preview): {query_preview}")
@@ -97,11 +98,15 @@ class Neo4jManager:
                 result = session.run(query, params)
                 records = [dict(record) for record in result]
                 elapsed_time = time.time() - start_time
-                self._logger.info(f"✅ Query completed in {elapsed_time:.3f}s - Returned {len(records)} records")
+                self._logger.info(
+                    f"✅ Query completed in {elapsed_time:.3f}s - Returned {len(records)} records"
+                )
                 return records
         except Exception as e:
             elapsed_time = time.time() - start_time
-            self._logger.error(f"❌ Query execution failed after {elapsed_time:.3f}s: {str(e)}")
+            self._logger.error(
+                f"❌ Query execution failed after {elapsed_time:.3f}s: {str(e)}"
+            )
             self._logger.debug(f"   Full query: {query}")
             self._logger.debug(f"   Params: {params}")
             raise
@@ -109,11 +114,11 @@ class Neo4jManager:
     def execute_write(self, query: str, params: Dict[str, Any] = None) -> Any:
         """
         Execute a write transaction.
-        
+
         Args:
             query: Cypher query string
             params: Query parameters (optional)
-            
+
         Returns:
             Query result
         """
@@ -122,9 +127,7 @@ class Neo4jManager:
 
         try:
             with self.driver.session(database=self.database) as session:
-                result = session.write_transaction(
-                    lambda tx: tx.run(query, params)
-                )
+                result = session.write_transaction(lambda tx: tx.run(query, params))
                 return result
         except Exception as e:
             self._logger.error(f"Write transaction failed: {str(e)}")
@@ -139,6 +142,9 @@ class Neo4jManager:
         """
         with self.driver.session(database=self.database) as session:
             try:
+                # 0. Ensure all other indexes are created first
+                self.create_indexes()
+
                 # 1. Vector index for Document embeddings
                 # Note: Neo4j 5.x+ uses CREATE VECTOR INDEX syntax
                 # Use underscore instead of hyphen for index name
@@ -158,7 +164,7 @@ class Neo4jManager:
                 except Exception as e:
                     # Fallback for older Neo4j versions or if index already exists
                     self._logger.warning(f"Vector index creation: {e}")
-                
+
                 # 2. Full-text index for keyword search
                 # Try Neo4j 5.x+ CREATE FULLTEXT INDEX syntax first
                 fulltext_index_query = """
@@ -170,7 +176,10 @@ class Neo4jManager:
                     self._logger.info("✅ Full-text index created/verified")
                 except Exception as e:
                     # Fallback to procedure-based syntax for older versions
-                    if "already exists" not in str(e).lower() and "procedure" not in str(e).lower():
+                    if (
+                        "already exists" not in str(e).lower()
+                        and "procedure" not in str(e).lower()
+                    ):
                         try:
                             fulltext_index_query_proc = """
                             CALL db.index.fulltext.createNodeIndex(
@@ -180,52 +189,91 @@ class Neo4jManager:
                             )
                             """
                             session.run(fulltext_index_query_proc)
-                            self._logger.info("✅ Full-text index created/verified (using procedure)")
+                            self._logger.info(
+                                "✅ Full-text index created/verified (using procedure)"
+                            )
                         except Exception as e2:
-                            self._logger.warning(f"Full-text index creation failed: {e2}")
+                            self._logger.warning(
+                                f"Full-text index creation failed: {e2}"
+                            )
                     elif "already exists" in str(e).lower():
                         self._logger.info("✅ Full-text index already exists")
                     else:
                         self._logger.warning(f"Full-text index creation: {e}")
-                
-                # 3. Graph relationships are automatically indexed by Neo4j
+
+                # 3. Full-text index for Chunk content
+                chunk_fulltext_query = """
+                CREATE FULLTEXT INDEX chunk_fulltext IF NOT EXISTS
+                FOR (c:Chunk) ON EACH [c.content]
+                """
+                session.run(chunk_fulltext_query)
+                self._logger.info("✅ Chunk full-text index created/verified")
+
+                # 4. Full-text index for Entity text/name
+                entity_fulltext_query = """
+                CREATE FULLTEXT INDEX entity_fulltext IF NOT EXISTS
+                FOR (e:Entity) ON EACH [e.text, e.name]
+                """
+                session.run(entity_fulltext_query)
+                self._logger.info("✅ Entity full-text index created/verified")
+
                 self._logger.info("✅ All indexes setup complete")
-                
+
             except Exception as e:
                 self._logger.error(f"Error setting up indexes: {e}")
                 raise
 
+    def get_existing_document_ids(self) -> set:
+        """
+        Get set of all existing document IDs (source file paths) in the database.
+
+        Returns:
+            Set of document IDs
+        """
+        query = "MATCH (d:Document) RETURN d.id as id"
+        try:
+            results = self.query_graph(query)
+            return {r["id"] for r in results}
+        except Exception as e:
+            self._logger.error(f"Failed to fetch existing document IDs: {e}")
+            return set()
+
     def get_statistics(self) -> Dict[str, Any]:
         """Get database statistics"""
         queries = {
-            'total_entities': "MATCH (e:Entity) RETURN count(e) as count",
-            'total_relations': "MATCH ()-[r]->() RETURN count(r) as count",
-            'total_chunks': "MATCH (c:Chunk) RETURN count(c) as count",
-            'total_documents': "MATCH (d:Document) RETURN count(d) as count",
-            'entity_types': """
+            "total_entities": "MATCH (e:Entity) RETURN count(e) as count",
+            "total_relations": "MATCH ()-[r]->() RETURN count(r) as count",
+            "total_chunks": "MATCH (c:Chunk) RETURN count(c) as count",
+            "total_documents": "MATCH (d:Document) RETURN count(d) as count",
+            "entity_types": """
                 MATCH (e:Entity)
                 RETURN e.type as type, count(e) as count
                 ORDER BY count DESC
                 LIMIT 10
             """,
-            'relation_types': """
+            "relation_types": """
                 MATCH ()-[r]->()
                 RETURN type(r) as type, count(r) as count
                 ORDER BY count DESC
                 LIMIT 10
-            """
+            """,
         }
 
         stats = {}
         for key, query in queries.items():
             try:
                 result = self.query_graph(query)
-                if key in ['total_entities', 'total_relations', 'total_chunks', 'total_documents']:
-                    stats[key] = result[0]['count'] if result else 0
+                if key in [
+                    "total_entities",
+                    "total_relations",
+                    "total_chunks",
+                    "total_documents",
+                ]:
+                    stats[key] = result[0]["count"] if result else 0
                 else:
                     stats[key] = result
             except Exception as e:
-                stats[key] = 0 if key.startswith('total') else []
+                stats[key] = 0 if key.startswith("total") else []
                 self._logger.debug(f"Error getting stats for {key}: {str(e)}")
 
         return stats
@@ -235,7 +283,8 @@ class Neo4jManager:
         try:
             self.query_graph("MATCH (n) DETACH DELETE n")
             self._logger.warning(
-                "Database cleared - all nodes and relationships deleted")
+                "Database cleared - all nodes and relationships deleted"
+            )
         except Exception as e:
             self._logger.error(f"Failed to clear database: {str(e)}")
             raise
@@ -247,14 +296,13 @@ class Neo4jManager:
             "CREATE CONSTRAINT document_id IF NOT EXISTS FOR (d:Document) REQUIRE d.id IS UNIQUE",
             "CREATE CONSTRAINT chunk_id IF NOT EXISTS FOR (c:Chunk) REQUIRE c.id IS UNIQUE",
             "CREATE CONSTRAINT image_id IF NOT EXISTS FOR (i:Image) REQUIRE i.id IS UNIQUE",
-            "CREATE CONSTRAINT table_id IF NOT EXISTS FOR (t:Table) REQUIRE t.id IS UNIQUE"
+            "CREATE CONSTRAINT table_id IF NOT EXISTS FOR (t:Table) REQUIRE t.id IS UNIQUE",
         ]
 
         for constraint in constraints:
             try:
                 self.query_graph(constraint)
-                self._logger.info(
-                    f"Constraint created: {constraint.split()[2]}")
+                self._logger.info(f"Constraint created: {constraint.split()[2]}")
             except Exception as e:
                 self._logger.debug(f"Constraint might already exist: {str(e)}")
 
@@ -264,7 +312,7 @@ class Neo4jManager:
             "CREATE INDEX entity_type IF NOT EXISTS FOR (e:Entity) ON (e.type)",
             "CREATE INDEX chunk_modality IF NOT EXISTS FOR (c:Chunk) ON (c.modality)",
             "CREATE FULLTEXT INDEX entity_fulltext IF NOT EXISTS FOR (e:Entity) ON EACH [e.text, e.type]",
-            "CREATE FULLTEXT INDEX chunk_fulltext IF NOT EXISTS FOR (c:Chunk) ON EACH [c.content]"
+            "CREATE FULLTEXT INDEX chunk_fulltext IF NOT EXISTS FOR (c:Chunk) ON EACH [c.content]",
         ]
 
         for index in indexes:
