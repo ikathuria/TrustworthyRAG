@@ -12,6 +12,7 @@ from src.neo4j.neo4j_manager import Neo4jManager
 from systems import SystemRegistry
 import src.utils.constants as C
 from metrics import ndcg_at_k, recall_at_k, hit_rate
+from src.qalf.query_complexity import QueryComplexityClassifier
 
 # Configure logging
 logging.basicConfig(
@@ -68,6 +69,7 @@ def run_evaluation(doc_bench_dir: str):
 
     # Initialize Systems
     registry = SystemRegistry(neo4j_manager)
+    complexity_classifier = QueryComplexityClassifier()
 
     # Setup indexes to ensure all necessary indices (like chunk_fulltext) exist
     try:
@@ -86,6 +88,9 @@ def run_evaluation(doc_bench_dir: str):
 
     # iterate through DocBench folders
     subdirs = glob.glob(os.path.join(doc_bench_dir, "*"))
+
+    if args.limit:
+        subdirs = subdirs[: args.limit]
 
     all_results = []
 
@@ -130,6 +135,16 @@ def run_evaluation(doc_bench_dir: str):
                     item = json.loads(line)
                     query = item["question"]
 
+                    # Classify query complexity
+                    ling, sem, mod, ctx = complexity_classifier.classify_complexity_4d(
+                        query
+                    )
+                    is_complex = (
+                        "High" in [ling, sem, mod, ctx]
+                        or sum(1 for x in [ling, sem, mod, ctx] if x == "Medium") >= 2
+                    )
+                    complexity_label = "Complex" if is_complex else "Simple"
+
                     # For retrieval eval in single-doc QA, relevant_doc IS the target_doc_id
                     relevant_ids = {target_doc_id}
 
@@ -165,6 +180,11 @@ def run_evaluation(doc_bench_dir: str):
                                     "NDCG@10": ndcg_10,
                                     "Recall@10": recall_10,
                                     "Accuracy@1": accuracy_1,
+                                    "Complexity": complexity_label,
+                                    "Ling_Comp": ling,
+                                    "Sem_Comp": sem,
+                                    "Mod_Comp": mod,
+                                    "Ctx_Comp": ctx,
                                 }
                             )
 
@@ -186,8 +206,16 @@ def run_evaluation(doc_bench_dir: str):
 
     # Pivot for summary table
     summary = df.groupby("System")[["NDCG@10", "Recall@10", "Accuracy@1"]].mean()
-    print("\n=== Evaluation Results ===")
+    print("\n=== Overall Evaluation Results ===")
     print(summary)
+
+    # Complexity breakdown
+    complexity_summary = df.groupby(["System", "Complexity"])[
+        ["NDCG@10", "Recall@10", "Accuracy@1"]
+    ].mean()
+    print("\n=== Performance by Complexity ===")
+    print(complexity_summary)
+
     print("\nResults saved to evaluation_results.csv")
 
 
@@ -195,6 +223,12 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--doc_bench_dir", default="data/raw/DocBench", help="Path to DocBench data"
+    )
+    parser.add_argument(
+        "--limit",
+        type=int,
+        default=None,
+        help="Limit number of directories to evaluate",
     )
     args = parser.parse_args()
 

@@ -1,0 +1,276 @@
+2026-01-26 22:56:08,518 - Neo4jManager - INFO - Connected to Neo4j at neo4j://127.0.0.1:7687
+INFO:Neo4jManager:Connected to Neo4j at neo4j://127.0.0.1:7687
+INFO:sentence_transformers.SentenceTransformer:Use pytorch device_name: cuda:0
+INFO:sentence_transformers.SentenceTransformer:Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2026-01-26 22:56:09,885 - Neo4jMultiModalRetriever - INFO - Loaded embedding model: all-MiniLM-L6-v2
+INFO:Neo4jMultiModalRetriever:Loaded embedding model: all-MiniLM-L6-v2
+INFO:sentence_transformers.SentenceTransformer:Use pytorch device_name: cuda:0
+INFO:sentence_transformers.SentenceTransformer:Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2026-01-26 22:56:10,852 - Neo4jMultiModalRetriever - INFO - Loaded embedding model: all-MiniLM-L6-v2
+INFO:Neo4jMultiModalRetriever:Loaded embedding model: all-MiniLM-L6-v2
+2026-01-26 22:56:10,853 - QALFPipeline - INFO - QALF Pipeline initialized
+INFO:QALFPipeline:QALF Pipeline initialized
+Testing Adversarial Robustness
+Query: What is the primary challenge addressed by the introduction of the Linked WikiText-2 dataset?
+Target (Poisoned): P19-1598_Poisoned
+Gold: P19-1598.pdf
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|##########| 1/1 [00:00<00:00,  6.38it/s]Batches: 100%|##########| 1/1 [00:00<00:00,  6.34it/s]
+2026-01-26 22:56:11,012 - Neo4jMultiModalRetriever - INFO - \U0001f50d [VECTOR] Starting multimodal vector similarity search (top_k=10, embedding_dim=384)
+INFO:Neo4jMultiModalRetriever:\U0001f50d [VECTOR] Starting multimodal vector similarity search (top_k=10, embedding_dim=384)
+2026-01-26 22:56:11,012 - Neo4jManager - INFO - \U0001f50d Executing Neo4j query (preview): 
+            CALL db.index.vector.queryNodes('text_chunk_vector_index', $top_k * 3, $query_embedding)
+            YIELD node AS chunk, score
+            MATCH (chunk)-[:IN_DOCUMENT]->(doc:Document)
+  ...
+INFO:Neo4jManager:\U0001f50d Executing Neo4j query (preview): 
+            CALL db.index.vector.queryNodes('text_chunk_vector_index', $top_k * 3, $query_embedding)
+            YIELD node AS chunk, score
+            MATCH (chunk)-[:IN_DOCUMENT]->(doc:Document)
+  ...
+2026-01-26 22:56:11,017 - Neo4jManager - INFO - \u2705 Query completed in 0.005s - Returned 10 records
+INFO:Neo4jManager:\u2705 Query completed in 0.005s - Returned 10 records
+2026-01-26 22:56:11,017 - Neo4jManager - INFO - \U0001f50d Executing Neo4j query (preview): 
+                CALL db.index.vector.queryNodes('table_vector_index', $top_k * 3, $query_embedding)
+                YIELD node AS table, score
+                MATCH (table)-[:IN_DOCUMENT]->(doc:Docum...
+INFO:Neo4jManager:\U0001f50d Executing Neo4j query (preview): 
+                CALL db.index.vector.queryNodes('table_vector_index', $top_k * 3, $query_embedding)
+                YIELD node AS table, score
+                MATCH (table)-[:IN_DOCUMENT]->(doc:Docum...
+2026-01-26 22:56:11,019 - Neo4jManager - INFO - \u2705 Query completed in 0.002s - Returned 10 records
+INFO:Neo4jManager:\u2705 Query completed in 0.002s - Returned 10 records
+2026-01-26 22:56:11,019 - Neo4jMultiModalRetriever - INFO - \u2705 [VECTOR] Retrieved 10 documents in 0.007s
+INFO:Neo4jMultiModalRetriever:\u2705 [VECTOR] Retrieved 10 documents in 0.007s
+[vector_only] Target Rank: 1 (Consensus: 0), Gold Rank: -1
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|##########| 1/1 [00:00<00:00, 221.98it/s]
+2026-01-26 22:56:11,243 - Neo4jMultiModalRetriever - INFO - \U0001f50d [VECTOR] Starting multimodal vector similarity search (top_k=10, embedding_dim=384)
+INFO:Neo4jMultiModalRetriever:\U0001f50d [VECTOR] Starting multimodal vector similarity search (top_k=10, embedding_dim=384)
+2026-01-26 22:56:11,243 - Neo4jManager - INFO - \U0001f50d Executing Neo4j query (preview): 
+            CALL db.index.vector.queryNodes('text_chunk_vector_index', $top_k * 3, $query_embedding)
+            YIELD node AS chunk, score
+            MATCH (chunk)-[:IN_DOCUMENT]->(doc:Document)
+  ...
+INFO:Neo4jManager:\U0001f50d Executing Neo4j query (preview): 
+            CALL db.index.vector.queryNodes('text_chunk_vector_index', $top_k * 3, $query_embedding)
+            YIELD node AS chunk, score
+            MATCH (chunk)-[:IN_DOCUMENT]->(doc:Document)
+  ...
+2026-01-26 22:56:11,247 - Neo4jManager - INFO - \u2705 Query completed in 0.004s - Returned 10 records
+INFO:Neo4jManager:\u2705 Query completed in 0.004s - Returned 10 records
+2026-01-26 22:56:11,247 - Neo4jManager - INFO - \U0001f50d Executing Neo4j query (preview): 
+                CALL db.index.vector.queryNodes('table_vector_index', $top_k * 3, $query_embedding)
+                YIELD node AS table, score
+                MATCH (table)-[:IN_DOCUMENT]->(doc:Docum...
+INFO:Neo4jManager:\U0001f50d Executing Neo4j query (preview): 
+                CALL db.index.vector.queryNodes('table_vector_index', $top_k * 3, $query_embedding)
+                YIELD node AS table, score
+                MATCH (table)-[:IN_DOCUMENT]->(doc:Docum...
+2026-01-26 22:56:11,249 - Neo4jManager - INFO - \u2705 Query completed in 0.002s - Returned 10 records
+INFO:Neo4jManager:\u2705 Query completed in 0.002s - Returned 10 records
+2026-01-26 22:56:11,249 - Neo4jMultiModalRetriever - INFO - \u2705 [VECTOR] Retrieved 10 documents in 0.006s
+INFO:Neo4jMultiModalRetriever:\u2705 [VECTOR] Retrieved 10 documents in 0.006s
+2026-01-26 22:56:11,249 - Neo4jMultiModalRetriever - INFO - \U0001f50d [KEYWORD] Starting full-text keyword search (top_k=10, query: 'What is the primary challenge addressed by the introduction of the Linked WikiText-2 dataset?...')
+INFO:Neo4jMultiModalRetriever:\U0001f50d [KEYWORD] Starting full-text keyword search (top_k=10, query: 'What is the primary challenge addressed by the introduction of the Linked WikiText-2 dataset?...')
+2026-01-26 22:56:11,249 - Neo4jManager - INFO - \U0001f50d Executing Neo4j query (preview): 
+            CALL db.index.fulltext.queryNodes("chunk_fulltext", $query_string, {limit: $top_k * 3})
+            YIELD node AS chunk, score
+            MATCH (chunk)-[:IN_DOCUMENT]->(doc:Document)
+   ...
+INFO:Neo4jManager:\U0001f50d Executing Neo4j query (preview): 
+            CALL db.index.fulltext.queryNodes("chunk_fulltext", $query_string, {limit: $top_k * 3})
+            YIELD node AS chunk, score
+            MATCH (chunk)-[:IN_DOCUMENT]->(doc:Document)
+   ...
+2026-01-26 22:56:11,251 - Neo4jManager - INFO - \u2705 Query completed in 0.002s - Returned 10 records
+INFO:Neo4jManager:\u2705 Query completed in 0.002s - Returned 10 records
+2026-01-26 22:56:11,251 - Neo4jMultiModalRetriever - INFO - \u2705 [KEYWORD] Retrieved 10 documents in 0.002s
+INFO:Neo4jMultiModalRetriever:\u2705 [KEYWORD] Retrieved 10 documents in 0.002s
+2026-01-26 22:56:11,251 - Neo4jMultiModalRetriever - INFO - \U0001f50d [GRAPH] Starting graph traversal search (top_k=10, entities: ['Linked', 'WikiText-2'], relationships: [])
+INFO:Neo4jMultiModalRetriever:\U0001f50d [GRAPH] Starting graph traversal search (top_k=10, entities: ['Linked', 'WikiText-2'], relationships: [])
+2026-01-26 22:56:11,251 - Neo4jManager - INFO - \U0001f50d Executing Neo4j query (preview): 
+                MATCH (entity:Entity)
+                WHERE entity.name IN $query_entities OR entity.text IN $query_entities
+                OPTIONAL MATCH (entity)-[r]->(related:Entity)
+            ...
+INFO:Neo4jManager:\U0001f50d Executing Neo4j query (preview): 
+                MATCH (entity:Entity)
+                WHERE entity.name IN $query_entities OR entity.text IN $query_entities
+                OPTIONAL MATCH (entity)-[r]->(related:Entity)
+            ...
+2026-01-26 22:56:11,369 - Neo4jManager - INFO - \u2705 Query completed in 0.118s - Returned 1 records
+INFO:Neo4jManager:\u2705 Query completed in 0.118s - Returned 1 records
+2026-01-26 22:56:11,369 - Neo4jMultiModalRetriever - INFO - \u2705 [GRAPH] Retrieved 1 documents in 0.118s
+INFO:Neo4jMultiModalRetriever:\u2705 [GRAPH] Retrieved 1 documents in 0.118s
+2026-01-26 22:56:11,369 - QALFPipeline - INFO - ================================================================================
+INFO:QALFPipeline:================================================================================
+2026-01-26 22:56:11,369 - QALFPipeline - INFO - \U0001f680 QALF PIPELINE START - Query: 'What is the primary challenge addressed by the introduction of the Linked WikiText-2 dataset?'
+INFO:QALFPipeline:\U0001f680 QALF PIPELINE START - Query: 'What is the primary challenge addressed by the introduction of the Linked WikiText-2 dataset?'
+2026-01-26 22:56:11,369 - QALFPipeline - INFO - ================================================================================
+INFO:QALFPipeline:================================================================================
+2026-01-26 22:56:11,369 - QALFPipeline - INFO - \U0001f4cb Configuration: top_k=10, retrieval_top_k=10
+INFO:QALFPipeline:\U0001f4cb Configuration: top_k=10, retrieval_top_k=10
+2026-01-26 22:56:11,369 - QALFPipeline - INFO - 
+\U0001f4ca STEP 1: Query Analysis
+INFO:QALFPipeline:
+\U0001f4ca STEP 1: Query Analysis
+2026-01-26 22:56:11,369 - QALFPipeline - INFO - --------------------------------------------------------------------------------
+INFO:QALFPipeline:--------------------------------------------------------------------------------
+WARNING:QueryComplexityClassifier:Cycle detected in dependency tree for token: What
+WARNING:QueryComplexityClassifier:Cycle detected in dependency tree for token: the
+WARNING:QueryComplexityClassifier:Cycle detected in dependency tree for token: primary
+WARNING:QueryComplexityClassifier:Cycle detected in dependency tree for token: challenge
+WARNING:QueryComplexityClassifier:Cycle detected in dependency tree for token: addressed
+WARNING:QueryComplexityClassifier:Cycle detected in dependency tree for token: by
+WARNING:QueryComplexityClassifier:Cycle detected in dependency tree for token: the
+WARNING:QueryComplexityClassifier:Cycle detected in dependency tree for token: introduction
+WARNING:QueryComplexityClassifier:Cycle detected in dependency tree for token: of
+WARNING:QueryComplexityClassifier:Cycle detected in dependency tree for token: the
+WARNING:QueryComplexityClassifier:Cycle detected in dependency tree for token: Linked
+WARNING:QueryComplexityClassifier:Cycle detected in dependency tree for token: WikiText-2
+WARNING:QueryComplexityClassifier:Cycle detected in dependency tree for token: dataset
+WARNING:QueryComplexityClassifier:Cycle detected in dependency tree for token: ?
+2026-01-26 22:56:11,379 - QALFPipeline - INFO - \u2705 Complexity: ('Medium', 'Low', 'Low', 'Medium') | Intent: factual_lookup (took 0.010s)
+INFO:QALFPipeline:\u2705 Complexity: ('Medium', 'Low', 'Low', 'Medium') | Intent: factual_lookup (took 0.010s)
+2026-01-26 22:56:11,379 - QALFPipeline - INFO - 
+\U0001f504 STEP 2: Adaptive Routing
+INFO:QALFPipeline:
+\U0001f504 STEP 2: Adaptive Routing
+2026-01-26 22:56:11,379 - QALFPipeline - INFO - --------------------------------------------------------------------------------
+INFO:QALFPipeline:--------------------------------------------------------------------------------
+2026-01-26 22:56:11,379 - QALFPipeline - INFO - \u2705 Active modalities: ['vector', 'keyword', 'graph'] (took 0.000s)
+INFO:QALFPipeline:\u2705 Active modalities: ['vector', 'keyword', 'graph'] (took 0.000s)
+2026-01-26 22:56:11,379 - QALFPipeline - INFO - 
+\U0001f527 STEP 3: Query Representation Generation
+INFO:QALFPipeline:
+\U0001f527 STEP 3: Query Representation Generation
+2026-01-26 22:56:11,379 - QALFPipeline - INFO - --------------------------------------------------------------------------------
+INFO:QALFPipeline:--------------------------------------------------------------------------------
+[fixed_rrf] Target Rank: 1 (Consensus: 0), Gold Rank: 2
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|##########| 1/1 [00:00<00:00, 199.85it/s]
+2026-01-26 22:56:11,608 - QALFPipeline - INFO - \u2705 Generated embedding (dim=384) and extracted 2 entities (took 0.229s)
+INFO:QALFPipeline:\u2705 Generated embedding (dim=384) and extracted 2 entities (took 0.229s)
+2026-01-26 22:56:11,608 - QALFPipeline - INFO -    Entities: ['Linked', 'WikiText-2']
+INFO:QALFPipeline:   Entities: ['Linked', 'WikiText-2']
+2026-01-26 22:56:11,608 - QALFPipeline - INFO - 
+\U0001f50d STEP 4: Multi-Modal Retrieval
+INFO:QALFPipeline:
+\U0001f50d STEP 4: Multi-Modal Retrieval
+2026-01-26 22:56:11,608 - QALFPipeline - INFO - --------------------------------------------------------------------------------
+INFO:QALFPipeline:--------------------------------------------------------------------------------
+2026-01-26 22:56:11,608 - Neo4jMultiModalRetriever - INFO - \U0001f50d [VECTOR] Starting multimodal vector similarity search (top_k=10, embedding_dim=384)
+INFO:Neo4jMultiModalRetriever:\U0001f50d [VECTOR] Starting multimodal vector similarity search (top_k=10, embedding_dim=384)
+2026-01-26 22:56:11,608 - Neo4jManager - INFO - \U0001f50d Executing Neo4j query (preview): 
+            CALL db.index.vector.queryNodes('text_chunk_vector_index', $top_k * 3, $query_embedding)
+            YIELD node AS chunk, score
+            MATCH (chunk)-[:IN_DOCUMENT]->(doc:Document)
+  ...
+INFO:Neo4jManager:\U0001f50d Executing Neo4j query (preview): 
+            CALL db.index.vector.queryNodes('text_chunk_vector_index', $top_k * 3, $query_embedding)
+            YIELD node AS chunk, score
+            MATCH (chunk)-[:IN_DOCUMENT]->(doc:Document)
+  ...
+2026-01-26 22:56:11,613 - Neo4jManager - INFO - \u2705 Query completed in 0.005s - Returned 10 records
+INFO:Neo4jManager:\u2705 Query completed in 0.005s - Returned 10 records
+2026-01-26 22:56:11,614 - Neo4jManager - INFO - \U0001f50d Executing Neo4j query (preview): 
+                CALL db.index.vector.queryNodes('table_vector_index', $top_k * 3, $query_embedding)
+                YIELD node AS table, score
+                MATCH (table)-[:IN_DOCUMENT]->(doc:Docum...
+INFO:Neo4jManager:\U0001f50d Executing Neo4j query (preview): 
+                CALL db.index.vector.queryNodes('table_vector_index', $top_k * 3, $query_embedding)
+                YIELD node AS table, score
+                MATCH (table)-[:IN_DOCUMENT]->(doc:Docum...
+2026-01-26 22:56:11,616 - Neo4jManager - INFO - \u2705 Query completed in 0.003s - Returned 10 records
+INFO:Neo4jManager:\u2705 Query completed in 0.003s - Returned 10 records
+2026-01-26 22:56:11,616 - Neo4jMultiModalRetriever - INFO - \u2705 [VECTOR] Retrieved 10 documents in 0.008s
+INFO:Neo4jMultiModalRetriever:\u2705 [VECTOR] Retrieved 10 documents in 0.008s
+2026-01-26 22:56:11,616 - QALFPipeline - INFO -    Vector: 10 results
+INFO:QALFPipeline:   Vector: 10 results
+2026-01-26 22:56:11,616 - Neo4jMultiModalRetriever - INFO - \U0001f50d [KEYWORD] Starting full-text keyword search (top_k=10, query: 'What is the primary challenge addressed by the introduction of the Linked WikiText-2 dataset?...')
+INFO:Neo4jMultiModalRetriever:\U0001f50d [KEYWORD] Starting full-text keyword search (top_k=10, query: 'What is the primary challenge addressed by the introduction of the Linked WikiText-2 dataset?...')
+2026-01-26 22:56:11,616 - Neo4jManager - INFO - \U0001f50d Executing Neo4j query (preview): 
+            CALL db.index.fulltext.queryNodes("chunk_fulltext", $query_string, {limit: $top_k * 3})
+            YIELD node AS chunk, score
+            MATCH (chunk)-[:IN_DOCUMENT]->(doc:Document)
+   ...
+INFO:Neo4jManager:\U0001f50d Executing Neo4j query (preview): 
+            CALL db.index.fulltext.queryNodes("chunk_fulltext", $query_string, {limit: $top_k * 3})
+            YIELD node AS chunk, score
+            MATCH (chunk)-[:IN_DOCUMENT]->(doc:Document)
+   ...
+2026-01-26 22:56:11,618 - Neo4jManager - INFO - \u2705 Query completed in 0.002s - Returned 10 records
+INFO:Neo4jManager:\u2705 Query completed in 0.002s - Returned 10 records
+2026-01-26 22:56:11,618 - Neo4jMultiModalRetriever - INFO - \u2705 [KEYWORD] Retrieved 10 documents in 0.002s
+INFO:Neo4jMultiModalRetriever:\u2705 [KEYWORD] Retrieved 10 documents in 0.002s
+2026-01-26 22:56:11,618 - QALFPipeline - INFO -    Keyword: 10 results
+INFO:QALFPipeline:   Keyword: 10 results
+2026-01-26 22:56:11,618 - Neo4jMultiModalRetriever - INFO - \U0001f50d [GRAPH] Starting graph traversal search (top_k=10, entities: ['Linked', 'WikiText-2'], relationships: [])
+INFO:Neo4jMultiModalRetriever:\U0001f50d [GRAPH] Starting graph traversal search (top_k=10, entities: ['Linked', 'WikiText-2'], relationships: [])
+2026-01-26 22:56:11,618 - Neo4jManager - INFO - \U0001f50d Executing Neo4j query (preview): 
+                MATCH (entity:Entity)
+                WHERE entity.name IN $query_entities OR entity.text IN $query_entities
+                OPTIONAL MATCH (entity)-[r]->(related:Entity)
+            ...
+INFO:Neo4jManager:\U0001f50d Executing Neo4j query (preview): 
+                MATCH (entity:Entity)
+                WHERE entity.name IN $query_entities OR entity.text IN $query_entities
+                OPTIONAL MATCH (entity)-[r]->(related:Entity)
+            ...
+2026-01-26 22:56:11,714 - Neo4jManager - INFO - \u2705 Query completed in 0.095s - Returned 1 records
+INFO:Neo4jManager:\u2705 Query completed in 0.095s - Returned 1 records
+2026-01-26 22:56:11,714 - Neo4jMultiModalRetriever - INFO - \u2705 [GRAPH] Retrieved 1 documents in 0.095s
+INFO:Neo4jMultiModalRetriever:\u2705 [GRAPH] Retrieved 1 documents in 0.095s
+2026-01-26 22:56:11,714 - QALFPipeline - INFO -    Graph: 1 results
+INFO:QALFPipeline:   Graph: 1 results
+2026-01-26 22:56:11,714 - QALFPipeline - INFO - \u2705 Retrieval complete: 21 total documents across 3 modalities (took 0.105s)
+INFO:QALFPipeline:\u2705 Retrieval complete: 21 total documents across 3 modalities (took 0.105s)
+2026-01-26 22:56:11,714 - QALFPipeline - INFO - 
+\U0001f91d STEP 5: Consensus Score Computation
+INFO:QALFPipeline:
+\U0001f91d STEP 5: Consensus Score Computation
+2026-01-26 22:56:11,714 - QALFPipeline - INFO - --------------------------------------------------------------------------------
+INFO:QALFPipeline:--------------------------------------------------------------------------------
+2026-01-26 22:56:11,714 - QALFPipeline - INFO - \u2705 Computed consensus scores for 18 documents (took 0.000s)
+INFO:QALFPipeline:\u2705 Computed consensus scores for 18 documents (took 0.000s)
+2026-01-26 22:56:11,714 - QALFPipeline - INFO - 
+\u2696\ufe0f  STEP 6: Adaptive Weight Computation
+INFO:QALFPipeline:
+\u2696\ufe0f  STEP 6: Adaptive Weight Computation
+2026-01-26 22:56:11,714 - QALFPipeline - INFO - --------------------------------------------------------------------------------
+INFO:QALFPipeline:--------------------------------------------------------------------------------
+2026-01-26 22:56:11,714 - QALFPipeline - INFO -    Base weights (\u03b1_intent): {'vector': 0.4, 'graph': 0.2, 'keyword': 0.4}
+INFO:QALFPipeline:   Base weights (\u03b1_intent): {'vector': 0.4, 'graph': 0.2, 'keyword': 0.4}
+2026-01-26 22:56:11,714 - QALFPipeline - INFO - \u2705 Adaptive weights computed (took 0.000s)
+INFO:QALFPipeline:\u2705 Adaptive weights computed (took 0.000s)
+2026-01-26 22:56:11,714 - QALFPipeline - INFO -    vector: 0.3760
+INFO:QALFPipeline:   vector: 0.3760
+2026-01-26 22:56:11,714 - QALFPipeline - INFO -    keyword: 0.3773
+INFO:QALFPipeline:   keyword: 0.3773
+2026-01-26 22:56:11,714 - QALFPipeline - INFO -    graph: 0.1933
+INFO:QALFPipeline:   graph: 0.1933
+2026-01-26 22:56:11,714 - QALFPipeline - INFO - 
+\U0001f500 STEP 7: Consensus-Based Fusion
+INFO:QALFPipeline:
+\U0001f500 STEP 7: Consensus-Based Fusion
+2026-01-26 22:56:11,714 - QALFPipeline - INFO - --------------------------------------------------------------------------------
+INFO:QALFPipeline:--------------------------------------------------------------------------------
+2026-01-26 22:56:11,714 - QALFPipeline - INFO - \u2705 Fusion complete: 18 documents ranked (took 0.000s)
+INFO:QALFPipeline:\u2705 Fusion complete: 18 documents ranked (took 0.000s)
+2026-01-26 22:56:11,714 - QALFPipeline - INFO - 
+\U0001f4dd STEP 8: Result Formatting
+INFO:QALFPipeline:
+\U0001f4dd STEP 8: Result Formatting
+2026-01-26 22:56:11,714 - QALFPipeline - INFO - --------------------------------------------------------------------------------
+INFO:QALFPipeline:--------------------------------------------------------------------------------
+2026-01-26 22:56:11,714 - QALFPipeline - INFO - \u2705 Formatted 10 results (took 0.000s)
+INFO:QALFPipeline:\u2705 Formatted 10 results (took 0.000s)
+2026-01-26 22:56:11,714 - QALFPipeline - INFO - ================================================================================
+INFO:QALFPipeline:================================================================================
+2026-01-26 22:56:11,714 - QALFPipeline - INFO - \U0001f389 QALF PIPELINE COMPLETE - Total time: 0.344s
+INFO:QALFPipeline:\U0001f389 QALF PIPELINE COMPLETE - Total time: 0.344s
+2026-01-26 22:56:11,714 - QALFPipeline - INFO -    Returned 10 documents
+INFO:QALFPipeline:   Returned 10 documents
+2026-01-26 22:56:11,714 - QALFPipeline - INFO - ================================================================================
+INFO:QALFPipeline:================================================================================
+2026-01-26 22:56:11,715 - Neo4jManager - INFO - Neo4j connection closed
+INFO:Neo4jManager:Neo4j connection closed
+[qalf] Target Rank: 1 (Consensus: 0), Gold Rank: 3
