@@ -3,235 +3,251 @@ Retrieval evaluation script for QALF.
 Evaluates retrieval effectiveness on clean data.
 """
 
-import argparse
+import os
 import json
-import logging
-import csv
-from pathlib import Path
-from typing import List, Dict, Any, Set
-import yaml
+import glob
 import pandas as pd
+import numpy as np
+from typing import List, Dict, Set, Any
 from tqdm import tqdm
+import logging
+import argparse
 
 from src.neo4j.neo4j_manager import Neo4jManager
+from src.qalf.query_complexity import QueryComplexityClassifier
 from src.utils.systems import SystemRegistry
-import src.utils.metrics
 import src.utils.constants as C
+from src.utils.metrics import ndcg_at_k, recall_at_k, hit_rate
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
+logger = logging.getLogger(__name__)
 
 
-class RetrievalEvaluator:
+def normalize_path(path: str) -> str:
+    """Normalize path to match Neo4j IDs (which depend on how they were ingested)"""
+    return os.path.normpath(path)
 
-    def __init__(
-        self,
-        config: Dict[str, Any] = "config.yaml",
-        dataset: str = "clean",
-        systems: List[str] = ["all"],
-        output_dir: str = "results"
-    ):
-        self.config = config
-        self.dataset = dataset
-        self.systems = systems
-        self.output_dir = output_dir
-        self._logger = self._setup_logging()
 
-    def _setup_logging(self) -> logging.Logger:
-        """Setup logger for the class"""
-        logger = logging.getLogger(self.__class__.__name__)
-        logger.setLevel(logging.INFO)
-        if not logger.handlers:
-            handler = logging.StreamHandler()
-            formatter = logging.Formatter(
-                '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-            )
-            handler.setFormatter(formatter)
-            logger.addHandler(handler)
-        return logger
+def get_ingested_documents(neo4j_manager: Neo4jManager) -> Set[str]:
+    """Get set of all document IDs currently in Neo4j"""
+    query = "MATCH (d:Document) RETURN d.id as id"
+    with neo4j_manager.driver.session(database=neo4j_manager.database) as session:
+        result = session.run(query)
+        # Normalize paths for comparison
+        documents = {normalize_path(record["id"]) for record in result}
+    logger.info(f"Found {len(documents)} ingested documents in Neo4j")
+    return documents
 
-    def load_queries(self,file_path: Path) -> List[Dict[str, Any]]:
-        """Load queries from JSONL or CSV file."""
-        queries = []
-        file_path = Path(file_path)
-        
-        if file_path.suffix == '.jsonl':
-            with open(file_path, 'r', encoding='utf-8') as f:
-                for line in f:
-                    queries.append(json.loads(line))
-        elif file_path.suffix == '.csv':
-            df = pd.read_csv(file_path)
-            queries = df.to_dict('records')
+
+def get_retrieved_doc_ids(
+    results: List[Dict[str, Any]], neo4j_manager: Neo4jManager
+) -> List[str]:
+    """Extract parent document IDs from retrieval results"""
+    doc_ids = []
+
+    for res in results:
+        # Check standard locations for doc ID
+        if "doc_id" in res:
+            doc_ids.append(normalize_path(res["doc_id"]))
+        elif "source" in res:
+            doc_ids.append(normalize_path(res["source"]))
+        elif "metadata" in res and "source" in res["metadata"]:
+            doc_ids.append(normalize_path(res["metadata"]["source"]))
+        # Sometimes doc_id is the source file path directly in this system
+
+    return doc_ids
+
+
+def run_retrieval_evaluation(
+    doc_bench_dir: str,
+    limit: int = None,
+    output_dir: str = "data/results",
+    top_k: int = 10,
+):
+    logger.info(f"Initializing evaluation with top_k={top_k}...")
+
+    # Connect to Neo4j
+    neo4j_manager = Neo4jManager(
+        uri=C.NEO4J_URI,
+        username=C.NEO4J_USERNAME,
+        password=C.NEO4J_PASSWORD,
+        database=C.NEO4J_DB,
+    )
+
+    # Initialize Systems
+    registry = SystemRegistry(neo4j_manager)
+    complexity_classifier = QueryComplexityClassifier()
+
+    # Setup indexes to ensure all necessary indices (like chunk_fulltext) exist
+    try:
+        logger.info("Setting up QALF indexes...")
+        registry.qalf.setup_indexes()
+        logger.info("✓ QALF indexes ready")
+    except Exception as e:
+        logger.warning(f"⚠️  Index setup note: {e}")
+
+    # Get available documents
+    ingested_docs = get_ingested_documents(neo4j_manager)
+
+    if not ingested_docs:
+        logger.error("No documents found in Neo4j. Please run ingestion first.")
+        return
+
+    # iterate through DocBench folders
+    subdirs = glob.glob(os.path.join(doc_bench_dir, "*"))
+
+    if limit:
+        subdirs = subdirs[:limit]
+
+    all_results = []
+
+    for subdir in tqdm(subdirs, desc="Evaluating Directories"):
+        if not os.path.isdir(subdir):
+            continue
+
+        # Find PDF and QA file
+        pdf_files = glob.glob(os.path.join(subdir, "*.pdf"))
+        qa_files = glob.glob(os.path.join(subdir, "*_qa.jsonl"))
+
+        if not pdf_files or not qa_files:
+            continue
+
+        # Assume 1 PDF per dir as per structure seen
+        pdf_path = normalize_path(pdf_files[0])
+        qa_path = qa_files[0]
+
+        # Check if this PDF is ingested
+        # We need to robustly match the ID.
+        # Ingestion logic uses absolute path usually, but sometimes relative.
+        # We check our normalized set.
+
+        target_doc_id = None
+        if pdf_path in ingested_docs:
+            target_doc_id = pdf_path
         else:
-            raise ValueError(f"Unsupported file format: {file_path.suffix}")
-        
-        return queries
+            # Try approximate match (basename)
+            pdf_basename = os.path.basename(pdf_path)
+            for doc in ingested_docs:
+                if doc.endswith(pdf_basename):
+                    target_doc_id = doc
+                    break
 
-    def parse_gold_evidence(gold_field: Any) -> Set[str]:
-        """Parse gold evidence into a set of document IDs."""
-        if isinstance(gold_field, str):
-            # Assume comma-separated string or single ID
-            return {x.strip() for x in gold_field.split(',')}
-        elif isinstance(gold_field, list):
-            return set(gold_field)
-        else:
-            return set()
+        if not target_doc_id:
+            continue  # Skip non-ingested
 
-    def evaluate_system(
-        self,
-        system_func, 
-        queries: List[Dict[str, Any]], 
-        top_k: int,
-        system_name: str
-    ) -> Dict[str, Any]:
-        """Run evaluation for a single system."""
-        self._logger.info(f"Evaluating system: {system_name}")
-        
-        results = []
-        metrics_sum = {
-            f"ndcg@{top_k}": 0.0,
-            f"recall@{top_k}": 0.0,
-            "mrr": 0.0
-        }
-        
-        for q in tqdm(queries, desc=f"Running {system_name}"):
-            query_text = q.get('query')
-            if not query_text:
-                continue
-                
-            # Get gold standard
-            # Supports 'gold_doc_ids', 'gold_answer' (if it contains IDs), or 'relevant_docs'
-            gold_ids = set()
-            if 'gold_doc_ids' in q:
-                gold_ids = self.parse_gold_evidence(q['gold_doc_ids'])
-            elif 'relevant_docs' in q:
-                gold_ids = self.parse_gold_evidence(q['relevant_docs'])
-                
-            # Run retrieval
-            try:
-                retrieved_docs = system_func(query_text, top_k=top_k)
-                retrieved_ids = [doc['doc_id'] for doc in retrieved_docs if doc.get('doc_id')]
-                
-                # Compute metrics
-                ndcg = metrics.ndcg_at_k(retrieved_ids, gold_ids, top_k)
-                recall = metrics.recall_at_k(retrieved_ids, gold_ids, top_k)
-                mrr_score = metrics.mrr(retrieved_ids, gold_ids)
-                
-                metrics_sum[f"ndcg@{top_k}"] += ndcg
-                metrics_sum[f"recall@{top_k}"] += recall
-                metrics_sum["mrr"] += mrr_score
-                
-                results.append({
-                    "query_id": q.get("id", q.get("query_id", "")),
-                    "query": query_text,
-                    "system": system_name,
-                    "retrieved_ids": retrieved_ids,
-                    "gold_ids": list(gold_ids),
-                    f"ndcg@{top_k}": ndcg,
-                    f"recall@{top_k}": recall,
-                    "mrr": mrr_score
-                })
-                
-            except Exception as e:
-                self._logger.error(f"Error processing query '{query_text}': {e}")
-                
-        # Compute averages
-        num_queries = len(results)
-        avg_metrics = {k: v / num_queries for k, v in metrics_sum.items()} if num_queries > 0 else metrics_sum
-        
-        return {
-            "system": system_name,
-            "metrics": avg_metrics,
-            "detailed_results": results
-        }
+        # Load Questions
+        with open(qa_path, "r", encoding="utf-8") as f:
+            for line_idx, line in enumerate(f):
+                try:
+                    item = json.loads(line)
+                    query = item["question"]
 
-    def main(self):
-        # Load config
-        config_path = Path(self.config)
-        if not config_path.exists():
-            # Fallback to default values if config doesn't exist
-            self._logger.warning(f"Config file {config_path} not found. Using defaults.")
-            config = {
-                "neo4j": {
-                    "uri": C.NEO4J_URI,
-                    "username": C.NEO4J_USERNAME,
-                    "password": C.NEO4J_PASSWORD,
-                    "database": C.NEO4J_DB
-                },
-                "datasets": {
-                    "clean": "data/clean_queries.jsonl" # Placeholder
-                },
-                "evaluation": {
-                    "top_k": 10
-                }
-            }
-        else:
-            with open(config_path, 'r') as f:
-                config = yaml.safe_load(f)
-                
-        # Setup Neo4j
-        neo4j_config = config.get("neo4j", {})
-        neo4j_manager = Neo4jManager(
-            uri=neo4j_config.get("uri", C.NEO4J_URI),
-            username=neo4j_config.get("username", C.NEO4J_USERNAME),
-            password=neo4j_config.get("password", C.NEO4J_PASSWORD),
-            database=neo4j_config.get("database", C.NEO4J_DB)
-        )
-        
-        # Initialize Systems
-        registry = SystemRegistry(neo4j_manager, config)
-        
-        # Determine systems to run
-        available_systems = [
-            "vector_only", "keyword_only", "graph_only", 
-            "fixed_rrf", "native_hybrid", "qalf"
-        ]
-        systems_to_run = self.systems
-        if "all" in systems_to_run:
-            systems_to_run = available_systems
-            
-        # Load data
-        dataset_path = config.get("datasets", {}).get(self.dataset)
-        if not dataset_path:
-            self._logger.error(f"Dataset '{self.dataset}' not found in config.")
-            return
-            
-        self._logger.info(f"Loading queries from {dataset_path}")
-        try:
-            queries = self.load_queries(dataset_path)
-        except Exception as e:
-            self._logger.error(f"Failed to load queries: {e}")
-            return
-            
-        top_k = config.get("evaluation", {}).get("top_k", 10)
-        
-        # Run evaluation
-        all_metrics = []
-        output_dir = Path(self.output_dir)
-        output_dir.mkdir(exist_ok=True, parents=True)
-        
-        for sys_name in systems_to_run:
-            try:
-                system_func = registry.get_system(sys_name)
-                result = self.evaluate_system(system_func, queries, top_k, sys_name)
-                
-                all_metrics.append({
-                    "system": sys_name,
-                    **result["metrics"]
-                })
-                
-                # Save detailed results
-                detailed_df = pd.DataFrame(result["detailed_results"])
-                detailed_df.to_csv(output_dir / f"{sys_name}_detailed.csv", index=False)
-                
-            except Exception as e:
-                self._logger.error(f"Failed to run system {sys_name}: {e}")
-                
-        # Save summary
-        if all_metrics:
-            summary_df = pd.DataFrame(all_metrics)
-            print("\n=== Evaluation Summary ===")
-            print(summary_df.to_markdown(index=False))
-            summary_df.to_csv(output_dir / "summary_metrics.csv", index=False)
-            
-        neo4j_manager.close()
+                    # Classify query complexity
+                    ling, sem, mod, ctx = complexity_classifier.classify_complexity_4d(
+                        query
+                    )
+                    is_complex = (
+                        "High" in [ling, sem, mod, ctx]
+                        or sum(1 for x in [ling, sem, mod, ctx] if x == "Medium") >= 2
+                    )
+                    complexity_label = "Complex" if is_complex else "Simple"
+
+                    # For retrieval eval in single-doc QA, relevant_doc IS the target_doc_id
+                    relevant_ids = {target_doc_id}
+
+                    # Run Systems
+                    for sys_name in ["vector_only", "fixed_rrf", "qalf"]:
+                        try:
+                            # Execute retrieval
+                            if sys_name == "vector_only":
+                                system_result = registry.run_vector_only(
+                                    query, top_k=top_k
+                                )
+                            elif sys_name == "fixed_rrf":
+                                system_result = registry.run_fixed_rrf(
+                                    query, top_k=top_k
+                                )
+                            elif sys_name == "qalf":
+                                system_result = registry.run_qalf(query, top_k=top_k)
+
+                            results = system_result["results"]
+                            answer = system_result["answer"]
+
+                            retrieved_ids = get_retrieved_doc_ids(
+                                results, neo4j_manager
+                            )
+
+                            # DEBUG: Log if retrieval set is empty or mismatch
+                            # if not retrieved_ids:
+                            #    logger.debug(f"Query '{query}' returned no results for {sys_name}")
+
+                            # Calculate Metrics
+                            ndcg_k = ndcg_at_k(retrieved_ids, relevant_ids, k=top_k)
+                            recall_k = recall_at_k(retrieved_ids, relevant_ids, k=top_k)
+                            accuracy_1 = hit_rate(retrieved_ids, relevant_ids, k=1)
+
+                            all_results.append(
+                                {
+                                    "Directory": os.path.basename(subdir),
+                                    "Query_ID": f"{os.path.basename(subdir)}_{line_idx}",
+                                    "System": sys_name,
+                                    f"NDCG@{top_k}": ndcg_k,
+                                    f"Recall@{top_k}": recall_k,
+                                    "Accuracy@1": accuracy_1,
+                                    "Complexity": complexity_label,
+                                    "Answer": answer,
+                                    "Ling_Comp": ling,
+                                    "Sem_Comp": sem,
+                                    "Mod_Comp": mod,
+                                    "Ctx_Comp": ctx,
+                                }
+                            )
+
+                        except Exception as e:
+                            logger.error(
+                                f"Error running {sys_name} for query in {subdir}: {e}"
+                            )
+
+                except json.JSONDecodeError:
+                    continue
+
+    # Save and Summarize
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+
+    df = pd.DataFrame(all_results)
+    output_path = os.path.join(output_dir, "evaluation_results.csv")
+    df.to_csv(output_path, index=False)
+
+    # Pivot for summary table
+    summary = df.groupby("System")[["NDCG@10", "Recall@10", "Accuracy@1"]].mean()
+    print("\n=== Overall Evaluation Results ===")
+    print(summary)
+
+    # Complexity breakdown
+    complexity_summary = df.groupby(["System", "Complexity"])[
+        ["NDCG@10", "Recall@10", "Accuracy@1"]
+    ].mean()
+    print("\n=== Performance by Complexity ===")
+    print(complexity_summary)
+
+    print(f"\nResults saved to {output_path}")
+
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--doc_bench_dir", default="data/raw/DocBench", help="Path to DocBench data"
+    )
+    parser.add_argument(
+        "--limit",
+        type=int,
+        default=None,
+        help="Limit number of directories to evaluate",
+    )
+    args = parser.parse_args()
+
+    run_evaluation(args.doc_bench_dir)

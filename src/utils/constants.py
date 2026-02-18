@@ -36,4 +36,5 @@ SPACY_MODEL = "en_core_web_sm"
 # Ollama - RAG Retrieval
 OLLAMA_URI = "http://localhost:11434"
 OLLAMA_MODEL = "llama3.1:8b"
+GENERATOR_MODEL = "llama3.1:8b"
 OLLAMA_EMBEDDING_MODEL = "nomic-embed-text"

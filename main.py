@@ -203,11 +203,11 @@ def query_pipeline():
     # Model configuration - can be changed here or via environment variables
     import os
 
-    llm_model = os.getenv("OLLAMA_MODEL", C.OLLAMA_MODEL)  # Default: llama3.1:8b
+    llm_model = os.getenv("OLLAMA_MODEL", C.GENERATOR_MODEL)  # Default: llama3.1:8b
     llm_temperature = float(os.getenv("OLLAMA_TEMPERATURE", "0.3"))
 
     print(f"   Using LLM: {llm_model} (temperature: {llm_temperature})")
-    print(f"   To change model, set OLLAMA_MODEL environment variable")
+    print(f"   To change model, set GENERATOR_MODEL environment variable")
     print(f"   Example: export OLLAMA_MODEL=llama3.2:3b")
 
     qalf_pipeline = QALFPipeline(
@@ -219,7 +219,7 @@ def query_pipeline():
     )
 
     # Override generator LLM model if different from default
-    if enable_generator and qalf_pipeline.generator and llm_model != C.OLLAMA_MODEL:
+    if enable_generator and qalf_pipeline.generator and llm_model != C.GENERATOR_MODEL:
         from langchain_ollama import OllamaLLM
         from langchain_core.output_parsers import StrOutputParser
 

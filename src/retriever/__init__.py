@@ -11,7 +11,7 @@ This module contains the QALF (Query-Adaptive Learned Fusion) retrieval componen
 from src.retriever.neo4j_retriever import Neo4jMultiModalRetriever
 from src.retriever.qalf_fusion import QALFFusion
 from src.retriever.qalf_pipeline import QALFPipeline
-from src.retriever.rag_generator import RAGGenerator
+from src.generator.rag_generator import RAGGenerator
 
 __all__ = [
     "Neo4jMultiModalRetriever",
@@ -19,4 +19,3 @@ __all__ = [
     "QALFPipeline",
     "RAGGenerator"
 ]
-

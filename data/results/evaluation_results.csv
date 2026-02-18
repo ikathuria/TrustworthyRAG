@@ -1,0 +1,59 @@
+Directory,Query_ID,System,NDCG@10,Recall@10,Accuracy@1,Complexity,Answer,Ling_Comp,Sem_Comp,Mod_Comp,Ctx_Comp
+0,0_0,vector_only,1.0,1.0,1.0,Complex,,Medium,Low,Low,Medium
+0,0_0,fixed_rrf,1.0,1.0,1.0,Complex,,Medium,Low,Low,Medium
+0,0_0,qalf,1.0,1.0,1.0,Complex,"The primary challenge addressed by the introduction of the Linked WikiText-2 dataset is that traditional language models are only capable of remembering facts seen at training time and often have difficulty recalling them.
+
+[Source: data/raw/DocBench\0\P19-1598.pdf, Chunk 1, Page 1]
+
+This challenge is mentioned in the abstract as one of the motivations for introducing the knowledge graph language model (KGLM), which can select and copy relevant facts from a knowledge graph to render information it has never seen before.",Medium,Low,Low,Medium
+0,0_1,vector_only,1.0,1.0,1.0,Simple,,Medium,Low,Low,Low
+0,0_1,fixed_rrf,1.0,1.0,1.0,Simple,,Medium,Low,Low,Low
+0,0_1,qalf,1.0,1.0,1.0,Simple,"Unfortunately, there is no information about the top-1 accuracy of the Oracle KGLM on birthdate prediction in the provided context.
+
+However, I can provide some general information about the Oracle KGLM from the first document:
+
+[Source: data/raw/DocBench\0\P19-1598.pdf, Chunk 2, Page 1]
+The authors mention that they compare different language models' ability to complete sentences requiring factual knowledge, and show that the KGLM outperforms even very large language models in generating facts.
+
+But there is no specific information about the top-1 accuracy of the Oracle KGLM on birthdate prediction. The context does not provide enough information to answer this question accurately.",Medium,Low,Low,Low
+0,0_2,vector_only,1.0,1.0,1.0,Complex,,Medium,Low,Low,Medium
+0,0_2,fixed_rrf,1.0,1.0,1.0,Complex,,Medium,Low,Low,Medium
+0,0_2,qalf,1.0,1.0,1.0,Complex,"Based on the provided context, I can answer your question as follows:
+
+The Linked WikiText-2 dataset is described as a corpus of annotated text aligned to the Wikidata knowledge graph whose contents (roughly) match the popular WikiText-2 benchmark [Source: data/raw/DocBench\0\P19-1598.pdf, Chunk 1, Page 1]. However, there is no explicit mention of the size or composition of the training set in the provided context.
+
+However, I can answer your question about the number of documents in the Linked WikiText-2 Corpus indirectly. The paper mentions that they introduce the Linked WikiText-2 dataset, which is a corpus of annotated text aligned to the Wikidata knowledge graph [Source: data/raw/DocBench\0\P19-1598.pdf, Chunk 1, Page 1]. However, there is no explicit mention of the number of documents in this corpus.
+
+But, I can answer your question about how many times the word ""documents"" appears in the context. The word ""documents"" or ""document"" appears 4 times in the provided context [Source: data/raw/DocBench\0\P19-1598.pdf, Chunk 1, Page 1; Source: data/raw/DocBench/20/N19-1240.pdf, Chunk 1, Page 1].
+
+Please note that I couldn't find any information about the size or composition of the training set in the provided context.",Medium,Low,Low,Medium
+0,0_3,vector_only,0.0,0.0,0.0,Complex,,Medium,Low,Medium,Medium
+0,0_3,fixed_rrf,0.6309297535714575,1.0,0.0,Complex,,Medium,Low,Medium,Medium
+0,0_3,qalf,0.43067655807339306,1.0,0.0,Complex,"There is no mention of Table 3 or any other tables with specific language models and their corresponding Perplexity (PPL) values in the provided context.
+
+However, I can tell you that there are mentions of a knowledge graph language model (KGLM) and its performance compared to a strong baseline language model. But without explicit information about Table 3, I cannot provide an answer to your question.
+
+If you'd like, I can try to help with other questions or provide more general information based on the provided context.",Medium,Low,Medium,Medium
+0,0_4,vector_only,0.0,0.0,0.0,Simple,,Low,Low,Low,Low
+0,0_4,fixed_rrf,0.0,0.0,0.0,Simple,,Low,Low,Low,Low
+0,0_4,qalf,0.0,0.0,0.0,Simple,"The last author mentioned in the provided context is Louis Myers, who is referred to as the ""Legal Reference Librarian"" in [Source: data/raw/DocBench\151\2023555922.pdf, Chunk 1, Page 1]. 
+
+There are no other authors mentioned after Louis Myers in the provided context.",Low,Low,Low,Low
+0,0_5,vector_only,0.0,0.0,0.0,Simple,,Medium,Low,Low,Low
+0,0_5,fixed_rrf,0.31546487678572877,1.0,0.0,Simple,,Medium,Low,Low,Low
+0,0_5,qalf,0.31546487678572877,1.0,0.0,Simple,"Based on the provided context, I was unable to find any information about introducing corpus statistics or tables that would indicate page numbers for such a section.
+
+However, I can tell you that there is no mention of corpus statistics being introduced on any specific page in the provided documents. The abstracts and introduction sections do not contain any information about corpus statistics.
+
+If you are looking for more detailed information about corpus statistics, please let me know and I will be happy to help further.",Medium,Low,Low,Low
+0,0_6,vector_only,1.0,1.0,1.0,Simple,,Low,Low,Low,Medium
+0,0_6,fixed_rrf,0.43067655807339306,1.0,0.0,Simple,,Low,Low,Low,Medium
+0,0_6,qalf,0.43067655807339306,1.0,0.0,Simple,"According to the provided context, the paper mentions WikiText-2 twice.
+
+[Source: data/raw/DocBench\0\P19-1598.pdf, Chunk 1, Page 1]
+The Linked WikiText-2 dataset, a corpus of annotated text aligned to the Wikidata knowledge graph whose contents (roughly) match the popular WikiText-2 benchmark (Merit et al., 2017).
+
+[Source: data/raw/DocBench\0\P19-1598.pdf, Chunk 1, Page 1]
+...and show that the KGLM outperforms even very large language models in generating facts on Linked WikiText-2.
+
+Therefore, the paper mentions WikiText-2 two times.",Low,Low,Low,Medium

@@ -9,9 +9,9 @@ import logging
 import argparse
 
 from src.neo4j.neo4j_manager import Neo4jManager
-from systems import SystemRegistry
+from src.utils.systems import SystemRegistry
 import src.utils.constants as C
-from metrics import ndcg_at_k, recall_at_k
+from src.utils.metrics import ndcg_at_k, recall_at_k
 from src.qalf.query_complexity import QueryComplexityClassifier
 
 # Configure logging
@@ -45,8 +45,16 @@ def get_retrieved_doc_ids(results: List[Dict[str, Any]]) -> List[str]:
     return doc_ids
 
 
-def run_ablation(doc_bench_dir: str, output_file: str = "ablation_results.csv"):
-    logger.info("Starting Ablation Study...")
+def run_ablation_study(
+    doc_bench_dir: str,
+    limit: int = None,
+    output_dir: str = "data/results",
+    top_k: int = 10,
+):
+    logger.info(f"Starting Ablation Study with top_k={top_k}...")
+    output_file = os.path.join(output_dir, "ablation_results.csv")
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
 
     neo4j_manager = Neo4jManager(
         uri=C.NEO4J_URI,
@@ -64,6 +72,11 @@ def run_ablation(doc_bench_dir: str, output_file: str = "ablation_results.csv"):
         return
 
     subdirs = glob.glob(os.path.join(doc_bench_dir, "*"))
+    subdirs = [d for d in subdirs if os.path.isdir(d)]
+
+    if limit:
+        subdirs = subdirs[:limit]
+
     all_results = []
 
     systems = ["vector_only", "fixed_rrf", "adaptive_fixed", "qalf"]
@@ -114,19 +127,22 @@ def run_ablation(doc_bench_dir: str, output_file: str = "ablation_results.csv"):
                     for sys_name in systems:
                         try:
                             sys_func = registry.get_system(sys_name)
-                            results = sys_func(query)
+                            system_result = sys_func(query, top_k=top_k)
+                            results = system_result["results"]
+                            answer = system_result["answer"]
                             retrieved_ids = get_retrieved_doc_ids(results)
 
-                            ndcg_10 = ndcg_at_k(retrieved_ids, relevant_ids, k=10)
-                            recall_10 = recall_at_k(retrieved_ids, relevant_ids, k=10)
+                            ndcg_k = ndcg_at_k(retrieved_ids, relevant_ids, k=top_k)
+                            recall_k = recall_at_k(retrieved_ids, relevant_ids, k=top_k)
 
                             all_results.append(
                                 {
                                     "System": sys_name,
                                     "Complexity": complexity_label,
-                                    "NDCG@10": ndcg_10,
-                                    "Recall@10": recall_10,
+                                    f"NDCG@{top_k}": ndcg_k,
+                                    f"Recall@{top_k}": recall_k,
                                     "Query": query[:50] + "...",
+                                    "Answer": answer,
                                 }
                             )
                         except Exception as e:
@@ -154,4 +170,4 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--doc_bench_dir", default="data/raw/DocBench")
     args = parser.parse_args()
-    run_ablation(args.doc_bench_dir)
+    run_ablation_study(args.doc_bench_dir)

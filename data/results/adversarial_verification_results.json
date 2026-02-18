@@ -1,20 +1,20 @@
 {
   "vector_only": {
-    "target_rank": 1,
+    "target_rank": -1,
     "target_consensus": -1,
-    "gold_rank": -1,
+    "gold_rank": 1,
     "gold_consensus": -1
   },
   "fixed_rrf": {
-    "target_rank": 1,
+    "target_rank": -1,
     "target_consensus": -1,
-    "gold_rank": 2,
+    "gold_rank": 1,
     "gold_consensus": -1
   },
   "qalf": {
-    "target_rank": 1,
-    "target_consensus": 0.6666666666666666,
-    "gold_rank": 3,
+    "target_rank": -1,
+    "target_consensus": -1,
+    "gold_rank": 1,
     "gold_consensus": 0.6666666666666666
   }
 }

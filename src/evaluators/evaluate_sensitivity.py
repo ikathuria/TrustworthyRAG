@@ -6,17 +6,22 @@ from typing import List, Dict, Any
 from tqdm import tqdm
 
 from src.neo4j.neo4j_manager import Neo4jManager
-from systems import SystemRegistry
+from src.utils.systems import SystemRegistry
 import src.utils.constants as C
-from metrics import ndcg_at_k, recall_at_k
+from src.utils.metrics import ndcg_at_k, recall_at_k
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-def run_sensitivity_analysis(target_dir: str, betas: List[float]):
-    logger.info("Initializing sensitivity analysis...")
+def run_sensitivity_analysis(
+    target_dir: str,
+    betas: List[float],
+    output_dir: str = "data/results",
+    top_k: int = 10,
+):
+    logger.info(f"Initializing sensitivity analysis with top_k={top_k}...")
 
     # Connect to Neo4j
     neo4j_manager = Neo4jManager(
@@ -53,7 +58,7 @@ def run_sensitivity_analysis(target_dir: str, betas: List[float]):
         registry.qalf.fusion.beta = beta
 
         # Execute retrieval
-        results = registry.run_qalf(query)
+        results = registry.run_qalf(query, top_k=top_k)
 
         # Extract IDs
         retrieved_ids = []
@@ -62,7 +67,7 @@ def run_sensitivity_analysis(target_dir: str, betas: List[float]):
             retrieved_ids.append(os.path.normpath(d_id))
 
         # Calculate Utility (NDCG)
-        ndcg_10 = ndcg_at_k(retrieved_ids, relevant_ids, k=10)
+        ndcg_k = ndcg_at_k(retrieved_ids, relevant_ids, k=top_k)
 
         # We also want to see the effect on the poisonous document's score if possible
         # For simplicity, we'll just track NDCG here, and separately discuss robustness
@@ -70,7 +75,7 @@ def run_sensitivity_analysis(target_dir: str, betas: List[float]):
         sensitivity_results.append(
             {
                 "Beta": beta,
-                "NDCG@10": ndcg_10,
+                f"NDCG@{top_k}": ndcg_k,
                 "Top_Doc_ID": results[0]["doc_id"] if results else "None",
                 "Top_Doc_Consensus": results[0].get("consensus", 0) if results else 0,
             }
@@ -81,8 +86,12 @@ def run_sensitivity_analysis(target_dir: str, betas: List[float]):
     print("\n=== Sensitivity Analysis Summary ===")
     print(df)
 
-    df.to_csv("sensitivity_results.csv", index=False)
-    logger.info("Sensitivity results saved to sensitivity_results.csv")
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+
+    output_path = os.path.join(output_dir, "sensitivity_results.csv")
+    df.to_csv(output_path, index=False)
+    logger.info(f"Sensitivity results saved to {output_path}")
 
     neo4j_manager.close()
 

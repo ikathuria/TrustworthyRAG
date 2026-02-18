@@ -12,7 +12,7 @@ from src.qalf.query_complexity import QueryComplexityClassifier
 from src.qalf.query_intent import QueryIntentClassifier
 from src.retriever.neo4j_retriever import Neo4jMultiModalRetriever
 from src.retriever.qalf_fusion import QALFFusion
-from src.retriever.rag_generator import RAGGenerator
+from src.generator.rag_generator import RAGGenerator
 from configs.routing_table import route_to_modalities
 from configs.alpha_weights import get_alpha_weights
 

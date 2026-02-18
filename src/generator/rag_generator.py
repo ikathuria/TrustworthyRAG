@@ -29,20 +29,20 @@ class RAGGenerator:
     ):
         """
         Initialize RAG Generator.
-        
+
         Args:
             neo4j_manager: Neo4jManager instance for fetching chunk content
-            llm_model: LLM model name (defaults to C.OLLAMA_MODEL)
+            llm_model: LLM model name (defaults to C.GENERATOR_MODEL)
             llm_temperature: Temperature for LLM generation
             max_context_chunks: Maximum number of chunks to include in context
         """
         self.neo4j_manager = neo4j_manager
-        self.llm_model = llm_model or C.OLLAMA_MODEL
+        self.llm_model = llm_model or C.GENERATOR_MODEL
         self.llm_temperature = llm_temperature
         self.max_context_chunks = max_context_chunks
-        
+
         self._logger = self._setup_logging()
-        
+
         # Initialize LLM
         try:
             self.llm = OllamaLLM(
@@ -54,7 +54,7 @@ class RAGGenerator:
         except Exception as e:
             self._logger.error(f"Failed to initialize LLM: {e}")
             raise
-        
+
         # Setup prompt template with enhanced instructions for tables and numerical data
         self.prompt_template = ChatPromptTemplate.from_messages([
             ("system", """You are a helpful assistant that answers questions based on the provided context from retrieved documents.
@@ -86,7 +86,7 @@ Question: {query}
 
 Please provide a detailed answer based on the context above. Include source citations where relevant. For table questions, extract exact values. For counting questions, count all occurrences in the context.""")
         ])
-        
+
         self.chain = self.prompt_template | self.llm | StrOutputParser()
 
     def _setup_logging(self) -> logging.Logger:
@@ -116,7 +116,7 @@ Please provide a detailed answer based on the context above. Include source cita
         import re
         query_lower = query.lower()
         return any(re.search(pattern, query_lower) for pattern in counting_patterns)
-    
+
     def fetch_chunk_content(
         self,
         doc_ids: List[str],
@@ -136,15 +136,15 @@ Please provide a detailed answer based on the context above. Include source cita
         """
         if not doc_ids:
             return []
-        
+
         start_time = time.time()
         self._logger.debug(f"Fetching chunk content for {len(doc_ids)} documents")
-        
+
         # For counting queries, fetch more chunks for accurate counting
         if query and self._is_counting_query(query):
             max_chunks_per_doc = 50  # Fetch more chunks for accurate counting
             self._logger.debug(f"Detected counting query - fetching {max_chunks_per_doc} chunks per doc")
-        
+
         # Check if query mentions a specific table (e.g., "Table 3", "Table 5")
         table_identifier = None
         if query:
@@ -153,7 +153,7 @@ Please provide a detailed answer based on the context above. Include source cita
             if table_match:
                 table_identifier = f"Table {table_match.group(1)}"
                 self._logger.debug(f"Detected table-specific query: {table_identifier}")
-        
+
         try:
             # Fetch top chunks AND tables for each document (ordered by chunk_index/page)
             # Use a simpler approach: fetch chunks and tables separately, then combine in Python
@@ -174,7 +174,7 @@ Please provide a detailed answer based on the context above. Include source cita
                    chunk.chunk_index AS chunk_index,
                    COALESCE(chunk.page, 1) AS page
             """
-            
+
             # First, fetch chunks
             chunk_results = self.neo4j_manager.query_graph(
                 cypher_query,
@@ -183,7 +183,7 @@ Please provide a detailed answer based on the context above. Include source cita
                     "max_chunks": max_chunks_per_doc
                 }
             )
-            
+
             # Then, fetch tables - prioritize specific table if mentioned in query
             if table_identifier:
                 # Fetch specific table first
@@ -254,10 +254,10 @@ Please provide a detailed answer based on the context above. Include source cita
                         "max_chunks": max_chunks_per_doc
                     }
                 )
-            
+
             # Combine results
             results = list(chunk_results) + list(table_results)
-            
+
             chunks = []
             for record in results:
                 chunks.append({
@@ -269,12 +269,12 @@ Please provide a detailed answer based on the context above. Include source cita
                     "chunk_index": record.get("chunk_index", 0),
                     "page": record.get("page", None)
                 })
-            
+
             elapsed_time = time.time() - start_time
             self._logger.debug(f"Fetched {len(chunks)} chunks in {elapsed_time:.3f}s")
-            
+
             return chunks
-            
+
         except Exception as e:
             elapsed_time = time.time() - start_time
             self._logger.error(f"Failed to fetch chunk content after {elapsed_time:.3f}s: {e}")
@@ -297,14 +297,14 @@ Please provide a detailed answer based on the context above. Include source cita
         """
         context_parts = []
         current_length = 0
-        
+
         for chunk in chunks[:self.max_context_chunks]:
             content = chunk.get("content", "")
             doc_title = chunk.get("doc_title", chunk.get("doc_id", "Unknown"))
             chunk_idx = chunk.get("chunk_index", 0)
             page = chunk.get("page")
             modality = chunk.get("modality", "text")
-            
+
             # Format with page number and modality information
             if modality == "table":
                 page_info = f", Page {page}" if page else ""
@@ -312,16 +312,16 @@ Please provide a detailed answer based on the context above. Include source cita
             else:
                 page_info = f", Page {page}" if page else ""
                 chunk_text = f"[Source: {doc_title}, Chunk {chunk_idx}{page_info}]\n{content}\n\n"
-            
+
             if current_length + len(chunk_text) > max_length:
                 break
-            
+
             context_parts.append(chunk_text)
             current_length += len(chunk_text)
-        
+
         context = "".join(context_parts)
         self._logger.debug(f"Built context with {len(context_parts)} chunks ({len(context)} chars)")
-        
+
         return context
 
     def generate(
@@ -345,7 +345,7 @@ Please provide a detailed answer based on the context above. Include source cita
         self._logger.info("=" * 80)
         self._logger.info(f"🤖 RAG GENERATION START - Query: '{query}'")
         self._logger.info("=" * 80)
-        
+
         if not retrieved_docs:
             self._logger.warning("No documents retrieved, cannot generate response")
             return {
@@ -355,19 +355,19 @@ Please provide a detailed answer based on the context above. Include source cita
                 "generation_time": 0.0,
                 "success": False
             }
-        
+
         # Step 1: Extract document IDs
         step_start = time.time()
         self._logger.info("\n📚 STEP 1: Fetching Document Content")
         self._logger.info("-" * 80)
         doc_ids = [doc.get("doc_id", "") for doc in retrieved_docs if doc.get("doc_id")]
         self._logger.info(f"   Retrieved {len(doc_ids)} document IDs")
-        
+
         # Step 2: Fetch chunk content (pass query for table-specific retrieval)
         chunks = self.fetch_chunk_content(doc_ids, max_chunks_per_doc=3, query=query)
         step_time = time.time() - step_start
         self._logger.info(f"✅ Fetched {len(chunks)} chunks from {len(doc_ids)} documents (took {step_time:.3f}s)")
-        
+
         if not chunks:
             self._logger.warning("No chunk content found for retrieved documents")
             return {
@@ -377,7 +377,7 @@ Please provide a detailed answer based on the context above. Include source cita
                 "generation_time": time.time() - generation_start,
                 "success": False
             }
-        
+
         # Step 3: Build context
         step_start = time.time()
         self._logger.info("\n📝 STEP 2: Building Context")
@@ -385,7 +385,7 @@ Please provide a detailed answer based on the context above. Include source cita
         context = self.build_context(chunks)
         step_time = time.time() - step_start
         self._logger.info(f"✅ Context built: {len(context)} characters from {len(chunks)} chunks (took {step_time:.3f}s)")
-        
+
         # Step 4: Generate response
         step_start = time.time()
         self._logger.info("\n💬 STEP 3: Generating Response")
@@ -401,7 +401,7 @@ Please provide a detailed answer based on the context above. Include source cita
             step_time = time.time() - step_start
             self._logger.error(f"❌ Generation failed after {step_time:.3f}s: {e}")
             response = f"I encountered an error while generating a response: {str(e)}"
-        
+
         # Step 5: Extract sources
         sources = []
         if include_sources:
@@ -415,14 +415,14 @@ Please provide a detailed answer based on the context above. Include source cita
                         "chunks_used": sum(1 for c in chunks if c.get("doc_id") == chunk.get("doc_id"))
                     })
                     seen_docs.add(doc_title)
-        
+
         total_time = time.time() - generation_start
         self._logger.info("=" * 80)
         self._logger.info(f"🎉 RAG GENERATION COMPLETE - Total time: {total_time:.3f}s")
         self._logger.info(f"   Response length: {len(response)} characters")
         self._logger.info(f"   Sources: {len(sources)} documents")
         self._logger.info("=" * 80)
-        
+
         return {
             "response": response,
             "sources": sources,
@@ -432,4 +432,3 @@ Please provide a detailed answer based on the context above. Include source cita
             "query": query,
             "retrieved_docs_count": len(retrieved_docs)
         }
-

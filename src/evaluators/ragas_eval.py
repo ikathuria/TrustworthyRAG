@@ -8,9 +8,9 @@ import argparse
 import logging
 
 from src.neo4j.neo4j_manager import Neo4jManager
-from systems import SystemRegistry
+from src.utils.systems import SystemRegistry
 import src.utils.constants as C
-from src.retriever.rag_generator import RAGGenerator
+from src.generator.rag_generator import RAGGenerator
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -57,7 +57,12 @@ def run_ragas_evaluation(eval_samples: List[Dict[str, Any]]):
     return data
 
 
-def main(doc_bench_dir: str, num_samples: int = 5):
+def main(
+    doc_bench_dir: str,
+    num_samples: int = 5,
+    output_dir: str = "data/results",
+    top_k: int = 10,
+):
     neo4j_manager = Neo4jManager(
         uri=C.NEO4J_URI,
         username=C.NEO4J_USERNAME,
@@ -89,7 +94,7 @@ def main(doc_bench_dir: str, num_samples: int = 5):
                 ground_truth = item.get("answer", "")
 
                 # Run QALF Retrieval
-                retrieved_docs = registry.run_qalf(query)
+                retrieved_docs = registry.run_qalf(query, top_k=top_k)
 
                 # Generate Answer
                 gen_result = generator.generate(query, retrieved_docs)
@@ -115,9 +120,13 @@ def main(doc_bench_dir: str, num_samples: int = 5):
                     break
 
     # Save the prepared dataset for review
-    with open("ragas_eval_data.json", "w") as f:
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+
+    output_path = os.path.join(output_dir, "ragas_eval_data.json")
+    with open(output_path, "w", encoding="utf-8") as f:
         json.dump(eval_samples, f, indent=2)
-    logger.info("Saved RAG samples to ragas_eval_data.json")
+    logger.info(f"Saved RAG samples to {output_path}")
 
     # run_ragas_evaluation(eval_samples)
 

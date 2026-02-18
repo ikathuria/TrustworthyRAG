@@ -8,7 +8,7 @@ from typing import List, Dict, Any
 from tqdm import tqdm
 
 from src.neo4j.neo4j_manager import Neo4jManager
-from systems import SystemRegistry
+from src.utils.systems import SystemRegistry
 import src.utils.constants as C
 
 # Configure logging
@@ -16,8 +16,13 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-def run_efficiency_evaluation(doc_bench_dir: str, limit: int = 10):
-    logger.info("Initializing efficiency evaluation...")
+def run_efficiency_evaluation(
+    doc_bench_dir: str,
+    limit: int = 10,
+    output_dir: str = "data/results",
+    top_k: int = 10,
+):
+    logger.info(f"Initializing efficiency evaluation with top_k={top_k}...")
 
     # Connect to Neo4j
     neo4j_manager = Neo4jManager(
@@ -64,13 +69,13 @@ def run_efficiency_evaluation(doc_bench_dir: str, limit: int = 10):
                     start_time = time.time()
 
                     if sys_name == "vector_only":
-                        results = registry.run_vector_only(query)
+                        results = registry.run_vector_only(query, top_k=top_k)
                         modalities_used = 1
                     elif sys_name == "fixed_rrf":
-                        results = registry.run_fixed_rrf(query)
+                        results = registry.run_fixed_rrf(query, top_k=top_k)
                         modalities_used = 3
                     elif sys_name == "qalf":
-                        results = registry.run_qalf(query)
+                        results = registry.run_qalf(query, top_k=top_k)
                         if results:
                             # QALF returns formatted results with 'modalities' key
                             modalities_used = len(results[0].get("modalities", []))
@@ -107,8 +112,12 @@ def run_efficiency_evaluation(doc_bench_dir: str, limit: int = 10):
         print("\n=== Efficiency Evaluation Summary ===")
         print(summary)
 
-        df.to_csv("efficiency_results.csv", index=False)
-        logger.info("Efficiency results saved to efficiency_results.csv")
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+
+        output_path = os.path.join(output_dir, "efficiency_results.csv")
+        df.to_csv(output_path, index=False)
+        logger.info(f"Efficiency results saved to {output_path}")
     else:
         logger.warning("No results generated.")
 
