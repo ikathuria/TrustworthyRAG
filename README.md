@@ -9,7 +9,7 @@ TrustworthyRAG is a research project exploring the vulnerabilities of Retrieval-
 
 - **Adversarial Attacks:** Prompt injections, retrieval poisoning, and backdoors targeting LLM-based RAG pipelines.
 - **Explainability:** Techniques to trace which retrieved documents influence model outputs.
-- **QALF Architecture:** A query-adaptive fusion mechanism that provides inherent resistance to single-modality poisoning.
+- **QALF Architecture:** A query-adaptive fusion mechanism that provides inherent resistance to single-modality poisoning, achieving a **13% NDCG improvement** over standard vector baselines and **76.0% overall generative accuracy** on DocBench.
 
 ## 🚀 QALF (Query-Adaptive Learned Fusion)
 
@@ -19,7 +19,7 @@ TrustworthyRAG is a research project exploring the vulnerabilities of Retrieval-
 - **4D Query Dynamic Analysis**: Linguistic, Semantic, Modality, and Contextual complexity classification.
 - **Intent-Based Routing**: Selects active modalities based on 7 intent categories.
 - **Consensus-Based Fusion**: Adaptive weighting based on cross-modality agreement to mitigate biased or poisoned results.
-- **Integrated Generator**: RAG pipeline with source-grounded answer generation using Llama 3.
+- **Integrated Generator**: RAG pipeline with source-grounded answer generation using Llama 3.1.
 
 ## 📂 Repository Structure
 
@@ -28,9 +28,10 @@ TrustworthyRAG/
 ├── data/               # Raw and processed datasets (DocBench)
 ├── src/                # Core implementation
 │   ├── evaluators/     # Specialized evaluation modules
-│   ├── generator/      # Llama-3 RAG generator logic
+│   ├── generator/      # Llama-3.1 RAG generator logic
 │   ├── neo4j/          # Neo4j management and ingestion
 │   ├── preprocessing/  # Document parsing and chunking
+│   ├── qalf/           # Query analysis (complexity + intent)
 │   ├── retriever/      # QALF pipeline (retriever + fusion)
 │   ├── utils/          # Constants, metrics, and system wrappers
 │   └── main.py         # Ingestion and query entry point
@@ -60,15 +61,17 @@ ollama pull nomic-embed-text
 ```
 
 ### 4. Database Setup
-Update `src/utils/constants.py` with your Neo4j credentials or set environment variables:
-- `NEO4J_URI`
-- `NEO4J_USERNAME`
-- `NEO4J_PASSWORD`
+Create a `.env` file:
+```env
+NEO4J_URI=neo4j://localhost:7687
+NEO4J_USERNAME=neo4j
+NEO4J_PASSWORD=your_password
+```
 
 ## 🛠️ Usage
 
 ### Data Ingestion
-Ingest PDFs into the Neo4j graph/vector store:
+Ingest PDFs into the Neo4j graph/vector store. You can provide wildcards to ingest multiple files. The system automatically **skips already ingested files** based on their source path.
 ```bash
 python main.py --mode ingest --files "data/raw/DocBench/0/*.pdf"
 ```
@@ -85,7 +88,7 @@ The `evaluate.py` script provides a unified interface for various evaluation met
 
 | Mode | Description |
 |------|-------------|
-| `retrieval` | Standard NDCG@10 and Recall@10 evaluation on DocBench. |
+| `retrieval` | Standard NDCG@K and Recall@K evaluation on DocBench. |
 | `adversarial` | Multi-modal consensus check against poisoned injections. |
 | `generator` | LLM-based accuracy scoring (0/1) with domain-specific results. |
 | `ablation` | Comparison across systems (Vector-only, RRF, QALF). |
@@ -93,16 +96,21 @@ The `evaluate.py` script provides a unified interface for various evaluation met
 | `sensitivity` | Analysis of QALF performance across different beta parameters. |
 | `significance`| T-test for statistical significance of QALF vs Vector Baseline. |
 | `ragas` | Prepares dataset samples for RAGAS evaluation. |
+| `all` | Runs all evaluation modes sequentially. |
+
+**Key Arguments:**
+- `--top_k`: Number of documents to retrieve (default: 10). Affects NDCG@K and Recall@K.
+- `--limit`: Limit the number of directories or samples to evaluate.
 
 **Example Command:**
 ```bash
-# Run full retrieval evaluation on first 5 DocBench directories
-python evaluate.py --mode retrieval --limit 5
+# Run full retrieval evaluation with top-5 results
+python evaluate.py --mode retrieval --top_k 5 --limit 10
 
 # Run statistical significance analysis
 python evaluate.py --mode significance
 
-# Run generator accuracy evaluation with LaTeX table output
+# Run generator accuracy evaluation
 python evaluate.py --mode generator --limit 10
 ```
 
