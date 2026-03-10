@@ -6,7 +6,7 @@ rrf:
 
 # Consensus-based fusion parameters
 consensus:
-  beta: 0.1  # Consensus influence factor (0.0 to 1.0)
+  beta: 0.5  # Consensus influence factor (0.0 to 1.0); paper default 0.5
   # Higher beta = more weight reduction for low-consensus docs
 
 # Retrieval parameters

@@ -1,5 +1,6 @@
 import os
 import json
+import glob
 import pandas as pd
 import logging
 from typing import List, Dict, Any
@@ -98,7 +99,6 @@ def run_sensitivity_analysis(
 
 if __name__ == "__main__":
     import argparse
-    import glob
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--dir", default="data/raw/DocBench/P19-1598")

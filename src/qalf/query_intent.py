@@ -6,12 +6,12 @@ from typing import Dict
 class QueryIntentClassifier:
     """
     Intent-Based Classifier for QALF.
-    Classifies queries into 7 intent categories for adaptive routing.
+    Classifies queries into 8 intent categories for adaptive routing.
     """
 
     def __init__(self):
         self._logger = logging.getLogger(self.__class__.__name__)
-        # 7 Intent Categories as per QALF specification
+        # 8 Intent Categories as per QALF specification (routing_table.INTENTS)
         self.intent_patterns = {
             "factual_lookup": [
                 r"who is", r"what is", r"when did", r"how many",
@@ -54,7 +54,7 @@ class QueryIntentClassifier:
         Classifies query intent.
         
         Returns:
-            One of: factual_lookup, comparative, temporal, causal,
+            One of: factual_lookup, relationship, comparative, temporal, causal,
                     definitional, visual_tabular, multi_hop
         """
         import time
@@ -131,14 +131,16 @@ class QueryIntentClassifier:
         """
         Legacy method for backward compatibility.
         Returns base weights for intent (used as α_intent in QALF).
+        Prefer configs.alpha_weights.get_alpha_weights() for production.
         """
         weights = {
-            "factual_lookup": {"vector": 0.7, "graph": 0.2, "keyword": 0.1},
+            "factual_lookup": {"vector": 0.4, "graph": 0.2, "keyword": 0.4},
+            "relationship": {"vector": 0.3, "graph": 0.6, "keyword": 0.1},
             "comparative": {"vector": 0.4, "graph": 0.5, "keyword": 0.1},
             "temporal": {"vector": 0.2, "graph": 0.7, "keyword": 0.1},
             "causal": {"vector": 0.3, "graph": 0.6, "keyword": 0.1},
-            "definitional": {"vector": 0.6, "graph": 0.2, "keyword": 0.2},
+            "definitional": {"vector": 0.4, "graph": 0.2, "keyword": 0.4},
             "visual_tabular": {"vector": 0.3, "graph": 0.2, "keyword": 0.5},
-            "multi_hop": {"vector": 0.2, "graph": 0.7, "keyword": 0.1}
+            "multi_hop": {"vector": 0.2, "graph": 0.7, "keyword": 0.1},
         }
-        return weights.get(intent, {"vector": 0.7, "graph": 0.2, "keyword": 0.1})
+        return weights.get(intent, {"vector": 0.4, "graph": 0.2, "keyword": 0.4})

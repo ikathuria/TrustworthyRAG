@@ -5,7 +5,7 @@ We have developed a custom Query Adaptive Learned Fusion (QALF) mechanism to enh
 There are three main pillars to QALF:
 1. **Query Complexity Classification** - Routes queries to optimal retrievers based on linguistic/semantic/modality/contextual complexity.
 
-2. **Intent-Aware Routing** - Selects retriever weights specific to query intent (factual vs. multi-hop vs. visual).
+2. **Intent-Aware Routing** - Selects retriever weights specific to query intent (factual, relationship, comparative, temporal, causal, definitional, visual_tabular, multi_hop).
 
 3. **Consensus-Based Fusion** - Models agreement between modalities; uses consensus distribution to weight fusion parameters.
 
