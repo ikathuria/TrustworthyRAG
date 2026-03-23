@@ -1,117 +1,156 @@
 # TrustworthyRAG
-> Robust and Explainable Retrieval-Augmented Generation (RAG) for Cybersecurity under Adversarial Attacks
+
+Query-Adaptive Learned Fusion (QALF) for trustworthy multimodal retrieval-augmented generation (RAG).
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) ![Python Version](https://img.shields.io/badge/python-3.10%2B-blue)
 
-## 📖 Overview
+## Overview
 
-TrustworthyRAG is a research project exploring the vulnerabilities of Retrieval-Augmented Generation (RAG) systems to **adversarial attacks** in the cybersecurity domain. The project focuses on:
+This repository implements the system described in the paper **"Query-Adaptive Learned Fusion for Robust Multimodal Retrieval-Augmented Generation"**.
 
-- **Adversarial Attacks:** Prompt injections, retrieval poisoning, and backdoors targeting LLM-based RAG pipelines.
-- **Explainability:** Techniques to trace which retrieved documents influence model outputs.
-- **QALF Architecture:** A query-adaptive fusion mechanism that provides inherent resistance to single-modality poisoning, achieving a **13% NDCG improvement** over standard vector baselines and **76.0% overall generative accuracy** on DocBench.
+QALF addresses a key limitation of hybrid RAG systems: static fusion across all queries. Instead, it uses query-aware routing and consensus-aware fusion over a unified Neo4j backend.
 
-## 🚀 QALF (Query-Adaptive Learned Fusion)
+Core idea:
+- classify each query by **4D complexity** (linguistic, semantic, modality, contextual),
+- infer **intent** (8 classes),
+- route to the right subset of modalities (**vector**, **keyword**, **graph**),
+- fuse results with a consensus-aware weighted RRF to reward cross-modal agreement and downweight suspicious single-modality evidence.
 
-**QALF** is a lightweight architecture for adversarial-aware multimodal retrieval-augmented generation (RAG). It combines vector, graph, and keyword retrieval using a **single Neo4j 5.x+ database**.
+## Paper-Aligned Results
 
-### Key Features
-- **4D Query Dynamic Analysis**: Linguistic, Semantic, Modality, and Contextual complexity classification.
-- **Intent-Based Routing**: Selects active modalities based on 7 intent categories.
-- **Consensus-Based Fusion**: Adaptive weighting based on cross-modality agreement to mitigate biased or poisoned results.
-- **Integrated Generator**: RAG pipeline with source-grounded answer generation using Llama 3.1.
+On DocBench:
+- **NDCG@10:** `0.488` (QALF) vs `0.423` (Vector-only), a **14%** improvement.
+- **Generative Accuracy:** **76.4%** overall on DocBench.
+- **Robustness:** consensus-based fusion suppresses poisoned evidence in visual-bait and entity-override case studies.
 
-## 📂 Repository Structure
+## What Is Implemented In This Repo
 
-```
+- `main.py`: end-to-end ingestion and interactive query pipeline
+  - parsing -> graph ingestion -> vector embedding -> adaptive retrieval (+ optional generation)
+- `src/qalf/`
+  - `query_complexity.py`: 4D complexity classifier
+  - `query_intent.py`: intent classifier (8 categories)
+- `configs/routing_table.py`: intent/complexity -> active modality routing
+- `configs/alpha_weights.py`: base intent weights for adaptive fusion
+- `src/retriever/`
+  - `neo4j_retriever.py`: vector, keyword, graph retrieval against one Neo4j database
+  - `qalf_fusion.py`: consensus computation + adaptive weighted RRF
+  - `qalf_pipeline.py`: orchestrates full QALF retrieval flow
+- `src/generator/rag_generator.py`: source-grounded answer generation using Ollama-hosted LLM
+- `evaluate.py` + `src/evaluators/`: retrieval, adversarial, ablation, generator, sensitivity, significance, efficiency, RAGAS prep
+
+## Repository Layout
+
+```text
 TrustworthyRAG/
-├── data/               # Raw and processed datasets (DocBench)
-├── src/                # Core implementation
-│   ├── evaluators/     # Specialized evaluation modules
-│   ├── generator/      # Llama-3.1 RAG generator logic
-│   ├── neo4j/          # Neo4j management and ingestion
-│   ├── preprocessing/  # Document parsing and chunking
-│   ├── qalf/           # Query analysis (complexity + intent)
-│   ├── retriever/      # QALF pipeline (retriever + fusion)
-│   ├── utils/          # Constants, metrics, and system wrappers
-│   └── main.py         # Ingestion and query entry point
-├── evaluate.py         # Central evaluation interface
+├── configs/                # Hyperparameters, routing table, alpha weights
+├── data/                   # Raw, processed, and evaluation outputs
+├── examples/               # Quick examples and connection checks
+├── src/
+│   ├── evaluators/         # Evaluation modules
+│   ├── generator/          # RAG answer generation
+│   ├── neo4j/              # Graph/vector ingestion and DB management
+│   ├── preprocessing/      # Document parsing and extraction
+│   ├── qalf/               # Query complexity and intent analysis
+│   ├── retriever/          # Retrieval + fusion pipeline
+│   └── utils/              # Constants and shared utilities
+├── evaluate.py             # Evaluation entrypoint
+├── main.py                 # Ingestion/query entrypoint
+├── paper.tex               # Manuscript
 └── requirements.txt
 ```
 
-## ⚙️ Setup Instructions
+## Setup
 
-### 1. Requirements
-- **Neo4j 5.x+**: Running locally or via Docker.
-- **Ollama**: Running locally for LLM generation and evaluation.
+### 1) Prerequisites
 
-### 2. Install Dependencies
+- Python `3.10+`
+- Neo4j `5.x+` (local or remote)
+- Ollama (required for graph ingestion and generation)
+
+### 2) Install dependencies
+
 ```bash
-git clone https://github.com/yourusername/TrustworthyRAG.git
-cd TrustworthyRAG
 pip install -r requirements.txt
 python -m spacy download en_core_web_sm
 ```
 
-### 3. Model Setup (Ollama)
-Ensure the required models are pulled:
+### 3) Pull Ollama models
+
 ```bash
 ollama pull llama3.1:8b
 ollama pull nomic-embed-text
 ```
 
-### 4. Database Setup
-Create a `.env` file:
+### 4) Configure environment
+
+Create a `.env` in the project root:
+
 ```env
 NEO4J_URI=neo4j://localhost:7687
 NEO4J_USERNAME=neo4j
 NEO4J_PASSWORD=your_password
 ```
 
-## 🛠️ Usage
+## Running The Pipeline
 
-### Data Ingestion
-Ingest PDFs into the Neo4j graph/vector store. You can provide wildcards to ingest multiple files. The system automatically **skips already ingested files** based on their source path.
+### Ingest documents
+
+`main.py` supports wildcard ingestion and skips already ingested files.
+
 ```bash
 python main.py --mode ingest --files "data/raw/DocBench/0/*.pdf"
 ```
 
-### Retrieval & Querying
-Run a single QALF query:
+### Start interactive QALF retrieval (+ generation)
+
 ```bash
-python main.py --mode query --query "What is the primary challenge addressed by BERT?"
+python main.py --mode query
 ```
 
-## 📊 Evaluation
+In the interactive prompt:
+- enter natural-language queries,
+- use `stats` to inspect indexed graph stats,
+- use `quit`/`exit` to stop.
 
-The `evaluate.py` script provides a unified interface for various evaluation metrics and scenarios.
+### Run ingest + query in one flow
 
-| Mode | Description |
-|------|-------------|
-| `retrieval` | Standard NDCG@K and Recall@K evaluation on DocBench. |
-| `adversarial` | Multi-modal consensus check against poisoned injections. |
-| `generator` | LLM-based accuracy scoring (0/1) with domain-specific results. |
-| `ablation` | Comparison across systems (Vector-only, RRF, QALF). |
-| `efficiency` | Latency and modality usage analysis. |
-| `sensitivity` | Analysis of QALF performance across different beta parameters. |
-| `significance`| T-test for statistical significance of QALF vs Vector Baseline. |
-| `ragas` | Prepares dataset samples for RAGAS evaluation. |
-| `all` | Runs all evaluation modes sequentially. |
-
-**Key Arguments:**
-- `--top_k`: Number of documents to retrieve (default: 10). Affects NDCG@K and Recall@K.
-- `--limit`: Limit the number of directories or samples to evaluate.
-
-**Example Command:**
 ```bash
-# Run full retrieval evaluation with top-5 results
-python evaluate.py --mode retrieval --top_k 5 --limit 10
+python main.py --mode both --files "data/raw/DocBench/0/*.pdf"
+```
 
-# Run statistical significance analysis
-python evaluate.py --mode significance
+## Evaluation
 
-# Run generator accuracy evaluation
+Use `evaluate.py`:
+
+```bash
+python evaluate.py --mode retrieval --top_k 10
+python evaluate.py --mode adversarial
 python evaluate.py --mode generator --limit 10
+python evaluate.py --mode all
 ```
 
-Results are saved to `data/results/` for all modes.
+Supported `--mode` values:
+- `retrieval`: NDCG@K / Recall@K
+- `adversarial`: poisoning robustness checks
+- `ablation`: Vector-only vs variants vs QALF
+- `efficiency`: latency/modality analysis
+- `sensitivity`: beta (`consensus.beta`) sweep
+- `ragas`: RAGAS dataset preparation
+- `significance`: statistical significance from saved eval csv
+- `generator`: LLM-judge generation accuracy
+- `all`: run all evaluations
+
+Outputs are saved under `data/results/`.
+
+## Key Hyperparameters
+
+From `configs/hyperparameters.yaml`:
+- `rrf.k = 60`
+- `consensus.beta = 0.5`
+- retrieval defaults: `top_k = 10`, `top_k_final = 10`
+- embedding model: `all-MiniLM-L6-v2` (384d)
+
+<!-- ## Citation
+
+If you use this repository, please cite the accompanying paper in `paper.tex`. -->
